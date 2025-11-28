@@ -268,9 +268,11 @@ class RealisticSolarSystem {
             }
         };
         
-        // Detect mobile device
+        // Detect mobile device - check user agent, touch capability, or narrow width
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
-                        || window.innerWidth <= 768;
+                        || ('ontouchstart' in window) 
+                        || (navigator.maxTouchPoints > 0)
+                        || window.innerWidth <= 1024;
         
         this.init();
     }
@@ -995,7 +997,7 @@ class RealisticSolarSystem {
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             // Update mobile detection on resize
-            this.isMobile = window.innerWidth <= 768;
+            this.isMobile = window.innerWidth <= 1024;
         });
     }
     
@@ -1106,7 +1108,7 @@ class RealisticSolarSystem {
         
         // Close panels when clicking outside
         document.addEventListener('click', (e) => {
-            if (this.isMobile || window.innerWidth <= 768) {
+            if (this.isMobile || window.innerWidth <= 1024) {
                 const isClickInsidePanel = e.target.closest('.planet-list-panel') || 
                                           e.target.closest('.control-panel') ||
                                           e.target.closest('.mobile-planet-fab') ||
@@ -1462,7 +1464,7 @@ class RealisticSolarSystem {
         });
         
         // Close mobile panels after selection
-        if (this.isMobile || window.innerWidth <= 768) {
+        if (this.isMobile || window.innerWidth <= 1024) {
             const planetListPanel = document.querySelector('.planet-list-panel');
             const controlPanel = document.querySelector('.control-panel');
             if (planetListPanel) planetListPanel.classList.remove('mobile-visible');
