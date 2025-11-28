@@ -844,6 +844,14 @@ class RealisticSolarSystem {
             });
         }
         
+        // Helper to close control panel on mobile
+        const closeControlPanelOnMobile = () => {
+            if (this.isMobile) {
+                const cp = document.querySelector('.control-panel');
+                if (cp) cp.style.display = 'none';
+            }
+        };
+        
         // Pause button
         const pauseBtn = document.getElementById('pauseBtn');
         if (pauseBtn) {
@@ -851,13 +859,17 @@ class RealisticSolarSystem {
                 this.isPaused = !this.isPaused;
                 e.target.textContent = this.isPaused ? 'Play' : 'Pause';
                 e.target.classList.toggle('active');
+                closeControlPanelOnMobile();
             });
         }
         
         // Reset view button
         const resetBtn = document.getElementById('resetBtn');
         if (resetBtn) {
-            resetBtn.addEventListener('click', () => this.resetView());
+            resetBtn.addEventListener('click', () => {
+                this.resetView();
+                closeControlPanelOnMobile();
+            });
         }
         
         // Toggle buttons
@@ -867,6 +879,7 @@ class RealisticSolarSystem {
                 this.showOrbits = !this.showOrbits;
                 e.target.classList.toggle('active');
                 this.toggleOrbits();
+                closeControlPanelOnMobile();
             });
         }
         
@@ -876,6 +889,7 @@ class RealisticSolarSystem {
                 this.showLabels = !this.showLabels;
                 e.target.classList.toggle('active');
                 this.toggleLabels();
+                closeControlPanelOnMobile();
             });
         }
         
@@ -885,6 +899,7 @@ class RealisticSolarSystem {
                 this.educationalScale = !this.educationalScale;
                 e.target.classList.toggle('active');
                 this.updatePlanetScales();
+                closeControlPanelOnMobile();
             });
         }
         
@@ -893,6 +908,7 @@ class RealisticSolarSystem {
             autoRotateBtn.addEventListener('click', (e) => {
                 this.autoRotate = !this.autoRotate;
                 e.target.classList.toggle('active');
+                closeControlPanelOnMobile();
             });
         }
         
@@ -905,6 +921,7 @@ class RealisticSolarSystem {
                 } else {
                     this.resetView(); // Return to default view when toggled off
                 }
+                closeControlPanelOnMobile();
             });
         }
         
@@ -914,6 +931,7 @@ class RealisticSolarSystem {
             zoomInBtn.addEventListener('click', () => {
                 this.controls.cameraDistance *= 0.8;
                 this.controls.cameraDistance = Math.max(30, this.controls.cameraDistance);
+                closeControlPanelOnMobile();
             });
         }
         
@@ -922,12 +940,16 @@ class RealisticSolarSystem {
             zoomOutBtn.addEventListener('click', () => {
                 this.controls.cameraDistance *= 1.2;
                 this.controls.cameraDistance = Math.min(2500, this.controls.cameraDistance);
+                closeControlPanelOnMobile();
             });
         }
         
         const resetViewBtn = document.getElementById('resetViewBtn');
         if (resetViewBtn) {
-            resetViewBtn.addEventListener('click', () => this.resetView());
+            resetViewBtn.addEventListener('click', () => {
+                this.resetView();
+                closeControlPanelOnMobile();
+            });
         }
         
         // Info panel close
@@ -991,6 +1013,20 @@ class RealisticSolarSystem {
             if (controlPanel) {
                 controlPanel.style.display = 'none';
             }
+            // Show FAB buttons on mobile
+            if (mobilePlanetBtn) {
+                mobilePlanetBtn.style.display = 'flex';
+                mobilePlanetBtn.style.alignItems = 'center';
+                mobilePlanetBtn.style.justifyContent = 'center';
+                mobilePlanetBtn.style.top = '80px';
+                mobilePlanetBtn.style.left = '20px';
+                mobilePlanetBtn.style.bottom = 'auto';
+            }
+            if (mobileMenuBtn) {
+                mobileMenuBtn.style.display = 'flex';
+                mobileMenuBtn.style.alignItems = 'center';
+                mobileMenuBtn.style.justifyContent = 'center';
+            }
         }
         
         if (mobilePlanetBtn && planetListPanel) {
@@ -1008,17 +1044,6 @@ class RealisticSolarSystem {
                 controlPanel.style.display = isVisible ? 'none' : 'block';
                 // Hide planet list when showing control panel
                 if (planetListPanel) planetListPanel.style.display = 'none';
-            });
-            
-            // Auto-close control panel when any button inside is clicked
-            controlPanel.querySelectorAll('button, .toggle-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    if (this.isMobile) {
-                        setTimeout(() => {
-                            controlPanel.style.display = 'none';
-                        }, 100);
-                    }
-                });
             });
         }
         
