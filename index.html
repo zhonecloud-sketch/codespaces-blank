@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Solar System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            background-image: url('./space-hero-background.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffd700;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            width: 280px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .control-section h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: #ffd700;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-item {
+            margin-bottom: 1rem;
+        }
+        
+        .control-item label {
+            display: block;
+            font-size: 0.85rem;
+            color: #ccc;
+            margin-bottom: 0.3rem;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #ffd700;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .toggle-btn {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .toggle-btn:hover, .toggle-btn.active {
+            background: #ffd700;
+            color: #000;
+        }
+        
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            width: 320px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .info-panel.active {
+            display: block;
+        }
+        
+        .info-panel h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            color: #ffd700;
+            margin-bottom: 1rem;
+        }
+        
+        .info-panel p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #ccc;
+            margin-bottom: 0.8rem;
+        }
+        
+        .info-panel .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .planet-list-panel {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 1rem;
+            width: 180px;
+            max-height: calc(100vh - 420px);
+            overflow-y: auto;
+        }
+        
+        .planet-list-panel h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: #ffd700;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .planet-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .planet-list-item {
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.3rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #ccc;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .planet-list-item:hover {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+        }
+        
+        .planet-list-item.active {
+            background: rgba(255, 215, 0, 0.3);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+        }
+        
+        .planet-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 1s ease;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            border-top: 3px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 2rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            color: #ffd700;
+            letter-spacing: 2px;
+        }
+        
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+            display: none;
+        }
+        
+        .mobile-btn {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .control-panel {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
+                max-height: 200px;
+            }
+            
+            .info-panel {
+                width: calc(100% - 40px);
+                left: 20px;
+                right: 20px;
+                max-height: 250px;
+            }
+            
+            .planet-list-panel {
+                top: auto;
+                bottom: 80px;
+                left: 20px;
+                width: calc(100% - 40px);
+                max-height: 150px;
+            }
+            
+            .mobile-controls {
+                display: block;
+            }
+        }
+        
+        .instructions {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .instructions.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .instructions h2 {
+            font-family: 'Orbitron', monospace;
+            color: #ffd700;
+            margin-bottom: 1rem;
+        }
+        
+        .instructions p {
+            color: #ccc;
+            line-height: 1.5;
+            margin-bottom: 0.8rem;
+        }
+        
+        .instructions button {
+            background: #ffd700;
+            color: #000;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 25px;
+            font-family: 'Orbitron', monospace;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">LOADING SOLAR SYSTEM</div>
+    </div>
+    
+    <header class="header">
+        <h1>INTERACTIVE SOLAR SYSTEM</h1>
+    </header>
+    
+    <!-- Planet List Panel (Upper Left) -->
+    <div class="planet-list-panel">
+        <h3>Planets</h3>
+        <ul class="planet-list">
+            <li class="planet-list-item" data-planet="Mercury">
+                <span class="planet-dot" style="background: #a0522d;"></span>
+                Mercury
+            </li>
+            <li class="planet-list-item" data-planet="Venus">
+                <span class="planet-dot" style="background: #daa520;"></span>
+                Venus
+            </li>
+            <li class="planet-list-item" data-planet="Earth">
+                <span class="planet-dot" style="background: #4169e1;"></span>
+                Earth
+            </li>
+            <li class="planet-list-item" data-planet="Mars">
+                <span class="planet-dot" style="background: #cd5c5c;"></span>
+                Mars
+            </li>
+            <li class="planet-list-item" data-planet="Jupiter">
+                <span class="planet-dot" style="background: #d2691e;"></span>
+                Jupiter
+            </li>
+            <li class="planet-list-item" data-planet="Saturn">
+                <span class="planet-dot" style="background: #f4a460;"></span>
+                Saturn
+            </li>
+            <li class="planet-list-item" data-planet="Uranus">
+                <span class="planet-dot" style="background: #40e0d0;"></span>
+                Uranus
+            </li>
+            <li class="planet-list-item" data-planet="Neptune">
+                <span class="planet-dot" style="background: #4169e1;"></span>
+                Neptune
+            </li>
+        </ul>
+    </div>
+    
+    <div id="canvas-container"></div>
+    
+    <div class="control-panel">
+        <div class="control-section">
+            <h3>Time Controls</h3>
+            <div class="control-item">
+                <label for="speedSlider">Orbital Speed: <span id="speedValue">1.0</span>x</label>
+                <input type="range" id="speedSlider" class="slider" min="0" max="5" step="0.1" value="1">
+            </div>
+            <div class="control-item">
+                <button class="toggle-btn" id="pauseBtn">Pause</button>
+                <button class="toggle-btn" id="resetBtn">Reset View</button>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Visual Options</h3>
+            <div class="control-item">
+                <button class="toggle-btn active" id="orbitToggle">Orbit Lines</button>
+                <button class="toggle-btn active" id="labelsToggle">Planet Labels</button>
+            </div>
+            <div class="control-item">
+                <button class="toggle-btn" id="scaleToggle">Educational Scale</button>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Camera Controls</h3>
+            <div class="control-item">
+                <button class="toggle-btn" id="autoRotateBtn">Auto Rotate</button>
+                <button class="toggle-btn" id="topViewBtn">Top View</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-panel" id="infoPanel">
+        <button class="close-btn" id="closeInfoBtn">&times;</button>
+        <h3 id="planetName">Planet Name</h3>
+        <div id="planetInfo">
+            <p><strong>Distance from Sun:</strong> <span id="planetDistance"></span></p>
+            <p><strong>Diameter:</strong> <span id="planetDiameter"></span></p>
+            <p><strong>Orbital Period:</strong> <span id="planetPeriod"></span></p>
+            <p><strong>Rotation Period:</strong> <span id="planetRotation"></span></p>
+            <p id="planetDescription"></p>
+        </div>
+    </div>
+    
+    <div class="mobile-controls">
+        <div class="mobile-btn" id="zoomInBtn">+</div>
+        <div class="mobile-btn" id="zoomOutBtn">-</div>
+        <div class="mobile-btn" id="resetViewBtn">⌂</div>
+    </div>
+    
+    <div class="instructions" id="instructions">
+        <h2>Welcome to the Solar System</h2>
+        <p><strong>Desktop:</strong> Click and drag to rotate, scroll to zoom</p>
+        <p><strong>Mobile:</strong> Pinch to zoom, drag to rotate</p>
+        <p><strong>Click planets</strong> for detailed information</p>
+        <p><strong>Use controls</strong> to customize your view</p>
+        <button id="startExploring">Start Exploring</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="main-realistic.js"></script>
+</body>
+</html>
