@@ -983,19 +983,31 @@ class RealisticSolarSystem {
         const planetListPanel = document.querySelector('.planet-list-panel');
         const controlPanel = document.querySelector('.control-panel');
         
+        // On mobile, hide panels by default using inline styles
+        if (this.isMobile) {
+            if (planetListPanel) {
+                planetListPanel.style.display = 'none';
+            }
+            if (controlPanel) {
+                controlPanel.style.display = 'none';
+            }
+        }
+        
         if (mobilePlanetBtn && planetListPanel) {
             mobilePlanetBtn.addEventListener('click', () => {
-                planetListPanel.classList.toggle('mobile-visible');
+                const isVisible = planetListPanel.style.display === 'block';
+                planetListPanel.style.display = isVisible ? 'none' : 'block';
                 // Hide control panel when showing planet list
-                if (controlPanel) controlPanel.classList.remove('mobile-visible');
+                if (controlPanel) controlPanel.style.display = 'none';
             });
         }
         
         if (mobileMenuBtn && controlPanel) {
             mobileMenuBtn.addEventListener('click', () => {
-                controlPanel.classList.toggle('mobile-visible');
+                const isVisible = controlPanel.style.display === 'block';
+                controlPanel.style.display = isVisible ? 'none' : 'block';
                 // Hide planet list when showing control panel
-                if (planetListPanel) planetListPanel.classList.remove('mobile-visible');
+                if (planetListPanel) planetListPanel.style.display = 'none';
             });
         }
         
@@ -1007,8 +1019,8 @@ class RealisticSolarSystem {
                                           e.target.closest('.mobile-planet-fab') ||
                                           e.target.closest('.mobile-menu-fab');
                 if (!isClickInsidePanel) {
-                    if (planetListPanel) planetListPanel.classList.remove('mobile-visible');
-                    if (controlPanel) controlPanel.classList.remove('mobile-visible');
+                    if (planetListPanel) planetListPanel.style.display = 'none';
+                    if (controlPanel) controlPanel.style.display = 'none';
                 }
             }
         });
