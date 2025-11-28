@@ -1009,6 +1009,17 @@ class RealisticSolarSystem {
                 // Hide planet list when showing control panel
                 if (planetListPanel) planetListPanel.style.display = 'none';
             });
+            
+            // Auto-close control panel when any button inside is clicked
+            controlPanel.querySelectorAll('button, .toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (this.isMobile) {
+                        setTimeout(() => {
+                            controlPanel.style.display = 'none';
+                        }, 100);
+                    }
+                });
+            });
         }
         
         // Close panels when clicking outside

@@ -304,16 +304,16 @@
         .mobile-planet-fab {
             display: none;
             position: fixed;
-            bottom: 90px;
+            top: 80px;
             left: 20px;
             z-index: 15;
             background: rgba(255, 215, 0, 0.9);
             border: none;
             color: #000;
-            width: 56px;
-            height: 56px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s ease;
@@ -369,12 +369,12 @@
         .debug-mobile .planet-list-panel {
             display: none;
             position: fixed;
-            bottom: 160px;
+            top: 130px;
             left: 10px;
-            right: 10px;
-            top: auto;
-            width: auto;
-            max-height: 280px;
+            right: auto;
+            bottom: auto;
+            width: 180px;
+            max-height: calc(100vh - 200px);
             z-index: 20;
         }
         
@@ -442,12 +442,12 @@
             .planet-list-panel {
                 display: none !important;
                 position: fixed;
-                bottom: 160px;
+                top: 130px;
                 left: 10px;
-                right: 10px;
-                top: auto;
-                width: auto;
-                max-height: 280px;
+                right: auto;
+                bottom: auto;
+                width: 180px;
+                max-height: calc(100vh - 200px);
                 z-index: 20;
             }
             
@@ -570,55 +570,6 @@
             }
         }
         
-        /* Rotate device overlay for portrait mode on mobile */
-        .rotate-device-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
-            padding: 2rem;
-        }
-        
-        .rotate-device-overlay .rotate-icon {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            animation: rotateHint 2s ease-in-out infinite;
-        }
-        
-        .rotate-device-overlay h2 {
-            font-family: 'Orbitron', monospace;
-            color: #ffd700;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .rotate-device-overlay p {
-            color: #aaa;
-            font-size: 1rem;
-            max-width: 280px;
-        }
-        
-        @keyframes rotateHint {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-15deg); }
-            75% { transform: rotate(15deg); }
-        }
-        
-        /* Show overlay only on mobile in portrait */
-        @media (max-width: 768px) and (orientation: portrait) {
-            .rotate-device-overlay {
-                display: flex;
-            }
-        }
-        
         .instructions {
             position: fixed;
             top: 50%;
@@ -670,13 +621,6 @@
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
         <div class="loading-text">LOADING SOLAR SYSTEM</div>
-    </div>
-    
-    <!-- Rotate Device Overlay for Portrait Mode -->
-    <div class="rotate-device-overlay">
-        <div class="rotate-icon">📱</div>
-        <h2>Rotate Your Device</h2>
-        <p>For the best experience viewing the Solar System, please rotate your device to landscape mode.</p>
     </div>
     
     <header class="header">
