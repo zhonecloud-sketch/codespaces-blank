@@ -786,6 +786,8 @@ class RealisticSolarSystem {
         let touchStartDistance = 0;
         
         canvas.addEventListener('touchstart', (e) => {
+            // Only handle touches directly on the canvas, not on UI elements
+            if (e.target !== canvas) return;
             e.preventDefault();
             
             if (e.touches.length === 1) {
@@ -800,6 +802,8 @@ class RealisticSolarSystem {
         }, { passive: false });
         
         canvas.addEventListener('touchmove', (e) => {
+            // Only handle touches directly on the canvas
+            if (e.target !== canvas) return;
             e.preventDefault();
             
             if (e.touches.length === 1 && this.controls.mouseDown) {
@@ -828,6 +832,8 @@ class RealisticSolarSystem {
         }, { passive: false });
         
         canvas.addEventListener('touchend', (e) => {
+            // Only handle touches directly on the canvas
+            if (e.target !== canvas) return;
             e.preventDefault();
             this.controls.mouseDown = false;
             touchStartDistance = 0;
@@ -1104,6 +1110,9 @@ class RealisticSolarSystem {
         let lastTapY = 0;
         
         canvas.addEventListener('touchend', (e) => {
+            // Only handle touches on the canvas
+            if (e.target !== canvas) return;
+            
             const currentTime = new Date().getTime();
             const tapX = e.changedTouches[0].clientX;
             const tapY = e.changedTouches[0].clientY;
@@ -1182,6 +1191,9 @@ class RealisticSolarSystem {
         let touchStartTime = 0;
         
         canvas.addEventListener('touchstart', (e) => {
+            // Only handle touches on the canvas
+            if (e.target !== canvas) return;
+            
             if (e.touches.length === 1) {
                 touchStartX = e.touches[0].clientX;
                 touchStartTime = new Date().getTime();
@@ -1189,6 +1201,9 @@ class RealisticSolarSystem {
         });
         
         canvas.addEventListener('touchend', (e) => {
+            // Only handle touches on the canvas
+            if (e.target !== canvas) return;
+            
             if (e.changedTouches.length === 1) {
                 const touchEndX = e.changedTouches[0].clientX;
                 const touchEndTime = new Date().getTime();
