@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Model Viewer</title>
+    <title>Hilly Winter Cabin</title>
     <style>
         * {
             margin: 0;
@@ -239,13 +239,13 @@
     
     <!-- Control Buttons with Popup Sliders -->
     <div id="controls">
-        <button id="rotation-btn" class="control-btn active" title="Toggle Rotation">⏸</button>
-        <button id="reset-btn" class="control-btn" title="Reset View">△</button>
+        <button id="rotation-btn" class="control-btn active" title="Toggle Rotation"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
+        <button id="reset-btn" class="control-btn" title="Reset View"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,4 22,20 2,20"/></svg></button>
         <div class="control-wrapper">
             <div id="volume-popup" class="slider-popup">
-                <input type="range" id="volume-slider" class="vertical-slider" min="0" max="100" value="0">
+                <input type="range" id="volume-slider" class="vertical-slider" min="0" max="100" value="10">
             </div>
-            <button id="audio-btn" class="control-btn" title="Volume">🔇</button>
+            <button id="audio-btn" class="control-btn" title="Volume"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="3,9 3,15 7,15 12,20 12,4 7,9"/><line x1="16" y1="9" x2="22" y2="15" stroke="currentColor" stroke-width="2"/><line x1="22" y1="9" x2="16" y2="15" stroke="currentColor" stroke-width="2"/></svg></button>
         </div>
     </div>
     
@@ -595,6 +595,8 @@
                 // Start audio on first user interaction (required by browsers)
                 const startAudio = () => {
                     audio.play().catch(() => {});
+                    // Update audio button to one-wave speaker icon when music starts
+                    audioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="3,9 3,15 7,15 12,20 12,4 7,9"/><path d="M16,9.5 Q19,12 16,14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
                     document.removeEventListener('click', startAudio);
                     document.removeEventListener('touchstart', startAudio);
                 };
@@ -849,7 +851,7 @@
         function loadAudio() {
             audio = new Audio('resources/default.mp3');
             audio.loop = true;
-            audio.volume = 0; // Start muted
+            audio.volume = 0.1; // Start at 10% volume
             
             // Audio is loaded when it can play through
             audio.addEventListener('canplaythrough', () => {
@@ -871,13 +873,16 @@
             const volume = value / 100;
             audio.volume = volume;
             
-            // Update button icon based on volume level
+            // Update button icon based on volume level using SVG icons
             if (volume === 0) {
-                audioBtn.textContent = '🔇';
+                // Muted speaker with X
+                audioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="3,9 3,15 7,15 12,20 12,4 7,9"/><line x1="16" y1="9" x2="22" y2="15" stroke="currentColor" stroke-width="2"/><line x1="22" y1="9" x2="16" y2="15" stroke="currentColor" stroke-width="2"/></svg>';
             } else if (volume < 0.5) {
-                audioBtn.textContent = '🔉';
+                // One-wave speaker
+                audioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="3,9 3,15 7,15 12,20 12,4 7,9"/><path d="M16,9.5 Q19,12 16,14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
             } else {
-                audioBtn.textContent = '🔊';
+                // Hut icon for high volume
+                audioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="12,3 2,12 5,12 5,21 19,21 19,12 22,12"/><rect x="9" y="14" width="6" height="7"/></svg>';
             }
             // Audio playback continues regardless of volume - only volume changes
         }
@@ -950,7 +955,12 @@ Radius: ${cameraRadius.toFixed(2)}`;
         rotationBtn.addEventListener('click', () => {
             rotationEnabled = !rotationEnabled;
             rotationBtn.classList.toggle('active', rotationEnabled);
-            rotationBtn.textContent = rotationEnabled ? '⏸' : '▶';
+            // SVG icons for pause (rotation on) and play (rotation off)
+            if (rotationEnabled) {
+                rotationBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+            } else {
+                rotationBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>';
+            }
         });
         
         resetBtn.addEventListener('click', () => {
