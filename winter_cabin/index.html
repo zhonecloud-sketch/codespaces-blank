@@ -1,1 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Model Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            touch-action: none;
+            background-color: #000;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        #loading-text {
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        #loading-progress {
+            color: rgba(255, 255, 255, 0.7);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        /* Control buttons container */
+        #controls {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            gap: 15px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        
+        #controls.visible {
+            opacity: 1;
+        }
+        
+        /* Control wrapper for button + slider */
+        .control-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Hollow button style */
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #FFD700;
+            color: #FFD700;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            line-height: 1;
+            padding: 0;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+        
+        .control-btn:hover {
+            border-color: #FFF176;
+            color: #FFF176;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-btn.active {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFF176;
+            color: #FFF176;
+        }
+        
+        /* Slider popup container */
+        .slider-popup {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 8px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+        }
+        
+        .slider-popup.visible {
+            display: flex;
+        }
+        
+        .vertical-slider {
+            writing-mode: vertical-lr;
+            direction: rtl;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .vertical-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .vertical-slider::-moz-range-track {
+            width: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+        
+        .vertical-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* Touch hint */
+        #touch-hint {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        #touch-hint.visible {
+            opacity: 1;
+        }
+        
+        /* Debug info */
+        #debug-info {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading Experience...</div>
+        <div id="loading-progress"></div>
+    </div>
+    
+    <!-- Control Buttons with Popup Sliders -->
+    <div id="controls">
+        <button id="rotation-btn" class="control-btn active" title="Toggle Rotation">⏸</button>
+        <button id="reset-btn" class="control-btn" title="Reset View">△</button>
+        <div class="control-wrapper">
+            <div id="volume-popup" class="slider-popup">
+                <input type="range" id="volume-slider" class="vertical-slider" min="0" max="100" value="0">
+            </div>
+            <button id="audio-btn" class="control-btn" title="Volume">🔇</button>
+        </div>
+    </div>
+    
+    <div id="touch-hint">Pinch to zoom • 1 finger to rotate • 2 fingers to pan</div>
+    
+    <!-- Debug info -->
+    <div id="debug-info"></div>
 
+    <!-- Import maps for Three.js modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+        import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+        import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        // Global variables
+        let scene, camera, renderer, model;
+        let composer; // Post-processing composer
+        let mixer; // Animation mixer for animations
+        let hasEmbeddedLights = false; // Track if model has embedded lights
+        let hasEmbeddedCamera = false; // Track if model has embedded camera
+        let embeddedCamera = null; // Store embedded camera reference
+        let cameraAngle = 0;
+        let initialCameraAngle = 0; // Store initial angle for reset
+        let cameraRadius = 5;
+        let cameraElevation = 0.3; // Elevation angle (0 = level, 1 = directly above)
+        let initialCameraRadius, initialCameraElevation;
+        let initialCameraPosition = null; // Store GLB camera position
+        let clock = new THREE.Clock();
+        let audio;
+        let modelLoaded = false;
+        let audioLoaded = false;
+        
+        // Touch/mouse state
+        let isDragging = false;
+        let isPinching = false;
+        let needsPinchInit = true; // Flag to reinitialize pinch on next gesture
+        let lastTouchDistance = 0;
+        let lastTouchCenter = { x: 0, y: 0 };
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+
+        // DOM elements
+        const container = document.getElementById('container');
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingText = document.getElementById('loading-text');
+        const loadingProgress = document.getElementById('loading-progress');
+        const controlsDiv = document.getElementById('controls');
+        const volumeSlider = document.getElementById('volume-slider');
+        const rotationBtn = document.getElementById('rotation-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const audioBtn = document.getElementById('audio-btn');
+        const volumePopup = document.getElementById('volume-popup');
+        const touchHint = document.getElementById('touch-hint');
+        const debugInfo = document.getElementById('debug-info');
+        
+        // Rotation enabled state
+        let rotationEnabled = true;
+        
+        // Camera target (where the camera looks at)
+        let lookAtTarget = new THREE.Vector3(0, 0, 0);
+
+        // Rotation speed: 15 degrees per second converted to radians
+        const ROTATION_SPEED = THREE.MathUtils.degToRad(15);
+        const PAN_SPEED = 0.005;
+        const ZOOM_SPEED = 0.08;
+        let MIN_ZOOM = 0.1; // Will be updated based on model size
+        let MAX_ZOOM = 500; // Will be updated based on model size
+
+        // Initialize the scene
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            // Background will be set from GLB or left transparent
+
+            // Camera will be created after model loads (to use GLB camera settings if available)
+            // Create temporary camera for initialization
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 10);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer with alpha support for transparent materials
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: true,
+                premultipliedAlpha: false
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.sortObjects = true; // Ensure proper transparency sorting
+            container.appendChild(renderer.domElement);
+
+            // Post-processing for bloom (emissive glow)
+            composer = new EffectComposer(renderer);
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            // Bloom pass for emissive materials
+            const bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.5,  // bloom strength
+                0.4,  // bloom radius
+                0.85  // bloom threshold
+            );
+            composer.addPass(bloomPass);
+            
+            // Output pass for correct color space
+            const outputPass = new OutputPass();
+            composer.addPass(outputPass);
+
+            // Lighting will be set up after model loads (to check for GLB embedded lights)
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Setup touch/mouse controls
+            setupControls();
+        }
+
+        function setupLights() {
+            // Only add fallback lights if model doesn't have embedded lights
+            if (hasEmbeddedLights) {
+                console.log('Using embedded lights from model');
+                return;
+            }
+            
+            console.log('No embedded lights found, adding fallback lights');
+            
+            // Get model size for proper light positioning
+            let modelSize = 10; // Default
+            if (model) {
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                modelSize = Math.max(size.x, size.y, size.z);
+            }
+            
+            // Ambient light for base illumination (higher intensity for Phong materials)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            scene.add(ambientLight);
+            
+            // Directional light - position scales with model size
+            // For directional lights, position determines direction, not distance
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            directionalLight.position.set(modelSize * 0.5, modelSize, modelSize * 0.75);
+            scene.add(directionalLight);
+            
+            // Fill light from opposite side
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            fillLight.position.set(-modelSize * 0.5, modelSize * 0.5, -modelSize * 0.5);
+            scene.add(fillLight);
+            
+            // Back light for rim lighting effect
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            backLight.position.set(0, modelSize * 0.3, -modelSize);
+            scene.add(backLight);
+            
+            console.log('Fallback lights added, model size:', modelSize);
+        }
+
+        function setupControls() {
+            const canvas = renderer.domElement;
+            
+            // Mouse wheel zoom - scale with camera distance for consistent feel
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomDelta = e.deltaY * ZOOM_SPEED * (cameraRadius * 0.01);
+                cameraRadius = THREE.MathUtils.clamp(cameraRadius + zoomDelta, MIN_ZOOM, MAX_ZOOM);
+            }, { passive: false });
+            
+            // Mouse drag pan
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                
+                // Pan speed scales with camera distance
+                const panScale = cameraRadius * 0.003;
+                
+                // Get camera's right and forward vectors for proper panning
+                const forward = new THREE.Vector3();
+                camera.getWorldDirection(forward);
+                forward.y = 0; // Keep horizontal
+                forward.normalize();
+                
+                const right = new THREE.Vector3();
+                right.crossVectors(forward, camera.up).normalize();
+                
+                // Apply horizontal pan (along right vector)
+                lookAtTarget.add(right.multiplyScalar(-deltaX * panScale));
+                
+                // Apply vertical pan (in world Y and forward direction for depth)
+                lookAtTarget.y += deltaY * panScale;
+                lookAtTarget.add(forward.multiplyScalar(-deltaY * panScale * 0.5));
+                
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+            
+            canvas.addEventListener('mouseup', () => { isDragging = false; });
+            canvas.addEventListener('mouseleave', () => { isDragging = false; });
+            
+            // Touch controls
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                
+                if (e.touches.length === 1) {
+                    // Single finger - rotate
+                    isDragging = true;
+                    isPinching = false;
+                    needsPinchInit = true; // Reset for next pinch
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    // Two fingers - pinch zoom and pan
+                    isDragging = false;
+                    isPinching = true;
+                    needsPinchInit = true; // Will initialize on first touchmove
+                }
+            }, { passive: false });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                
+                if (e.touches.length === 1 && isDragging) {
+                    // Single finger drag - rotate camera
+                    const deltaX = e.touches[0].clientX - lastTouchX;
+                    
+                    // Adjust camera angle based on horizontal drag (increased sensitivity)
+                    cameraAngle -= deltaX * 0.02;
+                    
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                } else if (e.touches.length === 2 && isPinching) {
+                    // Initialize pinch values on first move to avoid jump
+                    if (needsPinchInit) {
+                        lastTouchDistance = getTouchDistance(e.touches);
+                        lastTouchCenter = getTouchCenter(e.touches);
+                        needsPinchInit = false;
+                        return; // Skip this frame
+                    }
+                    
+                    // Pinch to zoom - scale with camera distance for large models
+                    const currentDistance = getTouchDistance(e.touches);
+                    const delta = (lastTouchDistance - currentDistance) * ZOOM_SPEED * (cameraRadius * 0.02);
+                    cameraRadius = THREE.MathUtils.clamp(cameraRadius + delta, MIN_ZOOM, MAX_ZOOM);
+                    lastTouchDistance = currentDistance;
+                    
+                    // Two finger drag to pan - scale sensitivity with zoom level
+                    const currentCenter = getTouchCenter(e.touches);
+                    const panDeltaX = currentCenter.x - lastTouchCenter.x;
+                    const panDeltaY = currentCenter.y - lastTouchCenter.y;
+                    
+                    // Pan speed scales with camera distance for consistent feel
+                    const panScale = cameraRadius * 0.003;
+                    
+                    // Get camera's right and forward vectors for proper panning
+                    const forward = new THREE.Vector3();
+                    camera.getWorldDirection(forward);
+                    forward.y = 0; // Keep horizontal
+                    forward.normalize();
+                    
+                    const right = new THREE.Vector3();
+                    right.crossVectors(forward, camera.up).normalize();
+                    
+                    // Apply horizontal pan (along right vector)
+                    lookAtTarget.add(right.multiplyScalar(-panDeltaX * panScale));
+                    
+                    // Apply vertical pan (in world Y and forward direction for depth)
+                    lookAtTarget.y += panDeltaY * panScale;
+                    lookAtTarget.add(forward.multiplyScalar(-panDeltaY * panScale * 0.5));
+                    
+                    lastTouchCenter = currentCenter;
+                }
+            }, { passive: false });
+            
+            canvas.addEventListener('touchend', (e) => {
+                if (e.touches.length === 0) {
+                    isDragging = false;
+                    isPinching = false;
+                    needsPinchInit = true;
+                } else if (e.touches.length === 1) {
+                    isPinching = false;
+                    needsPinchInit = true;
+                    isDragging = true;
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                }
+            });
+        }
+        
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        
+        function getTouchCenter(touches) {
+            return {
+                x: (touches[0].clientX + touches[1].clientX) / 2,
+                y: (touches[0].clientY + touches[1].clientY) / 2
+            };
+        }
+
+        function checkLoadingComplete() {
+            if (modelLoaded && audioLoaded) {
+                // Hide loading screen
+                loadingScreen.classList.add('hidden');
+                
+                // Show controls
+                controlsDiv.classList.add('visible');
+                
+                // Show touch hint briefly
+                touchHint.classList.add('visible');
+                setTimeout(() => {
+                    touchHint.classList.remove('visible');
+                }, 3000);
+                
+                // Start audio on first user interaction (required by browsers)
+                const startAudio = () => {
+                    audio.play().catch(() => {});
+                    document.removeEventListener('click', startAudio);
+                    document.removeEventListener('touchstart', startAudio);
+                };
+                document.addEventListener('click', startAudio);
+                document.addEventListener('touchstart', startAudio);
+                
+                // Start animation loop
+                animate();
+            }
+        }
+
+        function loadModel() {
+            loadingText.textContent = 'Loading 3D Model...';
+            
+            const loader = new GLTFLoader();
+            
+            // Setup DRACO decoder for compressed meshes
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
+            loader.setDRACOLoader(dracoLoader);
+            
+            // Setup KTX2 loader for compressed textures
+            const ktx2Loader = new KTX2Loader();
+            ktx2Loader.setTranscoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/');
+            ktx2Loader.detectSupport(renderer);
+            loader.setKTX2Loader(ktx2Loader);
+            
+            // Setup Meshopt decoder for meshopt compressed meshes
+            loader.setMeshoptDecoder(MeshoptDecoder);
+            
+            loader.load(
+                'resources/default.glb',
+                (gltf) => {
+                    console.log('=== Loading GLB file ===');
+                    processGLB(gltf);
+                },
+                (progress) => {
+                    if (progress.total > 0) {
+                        const percent = (progress.loaded / progress.total * 100).toFixed(0);
+                        loadingProgress.textContent = `Model: ${percent}%`;
+                    }
+                },
+                (error) => {
+                    console.error('Failed to load model:', error);
+                    loadingText.textContent = 'Error loading model';
+                    loadingProgress.textContent = 'Check resources/default.glb';
+                }
+            );
+        }
+        
+        function processGLB(gltf) {
+            model = gltf.scene;
+                    
+                    // Log all GLB data for debugging
+                    console.log('=== GLB FILE CONTENTS ===');
+                    console.log('Scene userData:', gltf.scene.userData);
+                    console.log('Cameras:', gltf.cameras);
+                    console.log('Animations:', gltf.animations?.length || 0);
+                    console.log('Asset info:', gltf.asset);
+                    
+                    // Check for parser data (raw glTF JSON)
+                    if (gltf.parser && gltf.parser.json) {
+                        const json = gltf.parser.json;
+                        console.log('glTF extensions:', json.extensions);
+                        console.log('glTF extras:', json.extras);
+                        console.log('Scene extras:', json.scenes?.[0]?.extras);
+                        
+                        // Check for background color in extensions or extras
+                        if (json.extensions?.KHR_lights_punctual) {
+                            console.log('Punctual lights:', json.extensions.KHR_lights_punctual);
+                        }
+                    }
+                    
+                    // Check scene background/environment
+                    if (gltf.scene.background) {
+                        console.log('Scene background:', gltf.scene.background);
+                        scene.background = gltf.scene.background;
+                    } else {
+                        // Fallback to light purple background if not defined in GLB
+                        scene.background = new THREE.Color(0xE6E6FA); // Lavender
+                        console.log('No background in GLB, using light purple fallback');
+                    }
+                    if (gltf.scene.environment) {
+                        console.log('Scene environment:', gltf.scene.environment);
+                        scene.environment = gltf.scene.environment;
+                    }
+
+                    // Handle animations from GLB file
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        mixer = new THREE.AnimationMixer(model);
+                        gltf.animations.forEach((clip) => {
+                            const action = mixer.clipAction(clip);
+                            action.play();
+                        });
+                        console.log('Animations loaded:', gltf.animations.length);
+                    }
+
+                    // Center the model
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+
+                    // Move model so its center is at origin
+                    model.position.sub(center);
+
+                    // Store model size for zoom limits
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    
+                    console.log('Model loaded, size:', { maxDim });
+
+                    // Process scene objects - minimal fixes for proper rendering
+                    model.traverse((child) => {
+                        // Handle meshes - only fix color spaces for textures
+                        if (child.isMesh && child.material) {
+                            const materials = Array.isArray(child.material) ? child.material : [child.material];
+                            
+                            // Check if mesh has vertex colors
+                            const hasVertexColors = child.geometry && child.geometry.attributes.color;
+                            
+                            materials.forEach((mat) => {
+                                // Enable vertex colors if geometry has them
+                                if (hasVertexColors) {
+                                    mat.vertexColors = true;
+                                }
+                                
+                                // Ensure proper color space for texture types
+                                if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+                                if (mat.emissiveMap) mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+                                if (mat.normalMap) mat.normalMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                if (mat.roughnessMap) mat.roughnessMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                if (mat.metalnessMap) mat.metalnessMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                if (mat.aoMap) mat.aoMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                mat.needsUpdate = true;
+                            });
+                        }
+                        
+                        // Handle skinned meshes (bone-based characters)
+                        if (child.isSkinnedMesh) {
+                            child.frustumCulled = false; // Prevent disappearing during animation
+                        }
+                        
+                        // Handle Points (particle systems) - fix color space only
+                        if (child.isPoints && child.material) {
+                            if (child.material.map) {
+                                child.material.map.colorSpace = THREE.SRGBColorSpace;
+                            }
+                            child.material.needsUpdate = true;
+                        }
+                    });
+
+                    scene.add(model);
+                    
+                    // Check for embedded cameras in the GLB
+                    model.traverse((child) => {
+                        if (child.isCamera && !hasEmbeddedCamera) {
+                            hasEmbeddedCamera = true;
+                            embeddedCamera = child;
+                            console.log('Found embedded camera:', child.type, child);
+                        }
+                    });
+                    
+                    // Also check gltf.cameras array
+                    if (gltf.cameras && gltf.cameras.length > 0 && !hasEmbeddedCamera) {
+                        hasEmbeddedCamera = true;
+                        embeddedCamera = gltf.cameras[0];
+                        console.log('Found camera from array:', embeddedCamera.type, embeddedCamera);
+                    }
+                    
+                    // Setup camera based on embedded camera or calculate from model
+                    if (hasEmbeddedCamera && embeddedCamera) {
+                        // Use embedded camera settings
+                        if (embeddedCamera.isPerspectiveCamera) {
+                            camera.fov = embeddedCamera.fov;
+                            camera.near = embeddedCamera.near;
+                            camera.far = embeddedCamera.far;
+                        }
+                        
+                        // Get world position of embedded camera
+                        const camWorldPos = new THREE.Vector3();
+                        embeddedCamera.getWorldPosition(camWorldPos);
+                        
+                        // Adjust for model centering offset
+                        camWorldPos.sub(center);
+                        
+                        // Calculate radius and elevation from camera position
+                        cameraRadius = Math.sqrt(camWorldPos.x * camWorldPos.x + camWorldPos.z * camWorldPos.z);
+                        if (cameraRadius < 0.1) cameraRadius = camWorldPos.length(); // If camera is directly above
+                        cameraElevation = camWorldPos.y / cameraRadius;
+                        cameraAngle = Math.atan2(camWorldPos.z, camWorldPos.x);
+                        
+                        initialCameraPosition = camWorldPos.clone();
+                        console.log('Using embedded camera:', { fov: camera.fov, near: camera.near, far: camera.far, radius: cameraRadius, elevation: cameraElevation });
+                    } else {
+                        // Calculate camera distance based on model size (fallback)
+                        cameraRadius = maxDim * 0.20;
+                        cameraElevation = 0.3;
+                        // Set camera to view the front of the model (looking from +Z towards origin)
+                        cameraAngle = Math.PI * 0.75; // 135 degrees - front view
+                        console.log('No embedded camera, using calculated position');
+                    }
+                    
+                    // Finalize model setup
+                    finalizeModelSetup(center);
+        }
+        
+        function finalizeModelSetup(center) {
+            // Store model size for zoom limits
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            
+            // Store initial values for reset AFTER camera setup
+            initialCameraRadius = cameraRadius;
+            initialCameraElevation = cameraElevation;
+            initialCameraAngle = cameraAngle;
+            
+            // Set MAX_ZOOM based on initial radius
+            MAX_ZOOM = initialCameraRadius * 3;
+            MIN_ZOOM = maxDim * 0.01; // Allow zooming in close but not inside model
+            
+            // Adjust camera near/far planes based on model size
+            camera.near = maxDim * 0.001;  // Very close
+            camera.far = maxDim * 10;       // Far enough to see entire model
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            
+            console.log('Camera setup:', { 
+                radius: cameraRadius, 
+                near: camera.near, 
+                far: camera.far,
+                maxDim: maxDim 
+            });
+            
+            // Update composer with new camera settings
+            composer.passes[0].camera = camera;
+            
+            // Check for embedded lights
+            model.traverse((child) => {
+                if (child.isLight) {
+                    hasEmbeddedLights = true;
+                }
+            });
+            
+            // Setup lights after checking model (uses fallback if no embedded lights)
+            setupLights();
+            
+            modelLoaded = true;
+            loadingProgress.textContent = 'Model loaded ✓';
+            checkLoadingComplete();
+        }
+
+        function loadAudio() {
+            audio = new Audio('resources/default.mp3');
+            audio.loop = true;
+            audio.volume = 0; // Start muted
+            
+            // Audio is loaded when it can play through
+            audio.addEventListener('canplaythrough', () => {
+                audioLoaded = true;
+                checkLoadingComplete();
+            }, { once: true });
+            
+            audio.addEventListener('error', () => {
+                console.warn('Audio file not found or error loading');
+                audioLoaded = true; // Continue anyway
+                checkLoadingComplete();
+            });
+            
+            // Start loading
+            audio.load();
+        }
+        
+        function setVolume(value) {
+            const volume = value / 100;
+            audio.volume = volume;
+            
+            // Update button icon based on volume level
+            if (volume === 0) {
+                audioBtn.textContent = '🔇';
+            } else if (volume < 0.5) {
+                audioBtn.textContent = '🔉';
+            } else {
+                audioBtn.textContent = '🔊';
+            }
+            // Audio playback continues regardless of volume - only volume changes
+        }
+        
+        function resetView() {
+            // Reset camera position to GLB camera or calculated initial
+            cameraRadius = initialCameraRadius;
+            cameraElevation = initialCameraElevation;
+            cameraAngle = initialCameraAngle;
+            
+            // Reset lookAt target to origin
+            lookAtTarget.set(0, 0, 0);
+            
+            // Reset touch/mouse state to prevent jump on next interaction
+            isDragging = false;
+            isPinching = false;
+            needsPinchInit = true;
+            
+            console.log('RESET VIEW:', { cameraRadius, cameraElevation, cameraAngle, lookAtTarget: lookAtTarget.toArray() });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+
+            // Rotate camera around the model at 15 degrees per second (if enabled)
+            if (rotationEnabled) {
+                cameraAngle += ROTATION_SPEED * delta;
+            }
+
+            // Calculate camera height proportional to distance (elevation angle)
+            const cameraHeight = cameraRadius * cameraElevation;
+
+            // Update camera position - orbit around the lookAt target
+            camera.position.x = lookAtTarget.x + Math.cos(cameraAngle) * cameraRadius;
+            camera.position.z = lookAtTarget.z + Math.sin(cameraAngle) * cameraRadius;
+            camera.position.y = lookAtTarget.y + cameraHeight;
+
+            // Always look at the target
+            camera.lookAt(lookAtTarget);
+            
+            // Update animations from GLB file
+            if (mixer) {
+                mixer.update(delta);
+            }
+            
+            // Update debug info
+            debugInfo.textContent = 
+                `Camera Pos: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})
+LookAt: (${lookAtTarget.x.toFixed(2)}, ${lookAtTarget.y.toFixed(2)}, ${lookAtTarget.z.toFixed(2)})
+Radius: ${cameraRadius.toFixed(2)}`;                
+
+            composer.render();
+        }
+
+        // Slider event listeners
+        volumeSlider.addEventListener('change', (e) => {
+            setVolume(parseInt(e.target.value));
+        });
+        
+        // Button event listeners
+        rotationBtn.addEventListener('click', () => {
+            rotationEnabled = !rotationEnabled;
+            rotationBtn.classList.toggle('active', rotationEnabled);
+            rotationBtn.textContent = rotationEnabled ? '⏸' : '▶';
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            resetView();
+        });
+        
+        audioBtn.addEventListener('click', () => {
+            // Toggle volume slider popup
+            volumePopup.classList.toggle('visible');
+            audioBtn.classList.toggle('active');
+        });
+        
+        // Close popups when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.control-wrapper') && !e.target.closest('#reset-btn') && !e.target.closest('#rotation-btn')) {
+                volumePopup.classList.remove('visible');
+                audioBtn.classList.remove('active');
+            }
+        });
+
+        // Handle visibility change to pause/resume audio
+        document.addEventListener('visibilitychange', () => {
+            if (audio) {
+                if (document.hidden) {
+                    audio.pause();
+                } else {
+                    // Always resume playback when page is visible
+                    audio.play().catch(() => {});
+                }
+            }
+        });
+        
+        // Start loading immediately
+        init();
+        loadAudio();
+        loadModel();
+    </script>
+</body>
+</html>
