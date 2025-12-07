@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
+  <!-- Background -->
+  <rect width="192" height="192" rx="32" fill="#0ea5e9"/>
+  
+  <!-- Grid lines (simplified 3x3) -->
+  <g stroke="white" stroke-width="4" stroke-linecap="round">
+    <!-- Vertical lines -->
+    <line x1="76" y1="36" x2="76" y2="156"/>
+    <line x1="116" y1="36" x2="116" y2="156"/>
+    
+    <!-- Horizontal lines -->
+    <line x1="36" y1="76" x2="156" y2="76"/>
+    <line x1="36" y1="116" x2="156" y2="116"/>
+  </g>
+  
+  <!-- Outer border -->
+  <rect x="36" y="36" width="120" height="120" rx="4" stroke="white" stroke-width="6" fill="none"/>
+  
+  <!-- Sparkle accent -->
+  <g fill="white">
+    <circle cx="156" cy="36" r="8"/>
+    <circle cx="168" cy="24" r="4"/>
+    <circle cx="144" cy="24" r="3"/>
+  </g>
+</svg>
