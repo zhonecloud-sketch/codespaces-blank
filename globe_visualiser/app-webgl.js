@@ -841,7 +841,8 @@
     
     // Create matrices
     const aspect = width / height;
-    const size = 1.2;
+    const isMobile = window.innerWidth < 768;
+    const size = isMobile ? 2.4 : 1.2;  // Shrink globe by half on mobile
     const projectionMatrix = createOrthographicMatrix(
       -size * aspect, size * aspect,
       -size, size,
@@ -1732,7 +1733,8 @@
     canvas.height = state.height;
     
     // Calculate radius for click detection
-    const size = 1.2;
+    const isMobile = window.innerWidth < 768;
+    const size = isMobile ? 2.4 : 1.2;  // Must match render() size
     const aspect = state.width / state.height;
     // In orthographic projection, the globe fills the view based on size parameter
     state.radius = Math.min(state.width / (2 * size * aspect), state.height / (2 * size));
