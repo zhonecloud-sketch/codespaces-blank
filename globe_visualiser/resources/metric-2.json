@@ -1,0 +1,1011 @@
+{
+  "metadata": {
+    "order": 2,
+    "id": "CORRUPTION_INDEX",
+    "label": "Corruption Index",
+    "title": "Corruption Perceptions Index 2024",
+    "displayHeaderText": "Transparency International's annual ranking of countries by perceived levels of public sector corruption.",
+    "displayPanelText": "CPI Score: 0 (Highly Corrupt) to 100 (Very Clean).",
+    "source": "Transparency International",
+    "_sourceUrl": "https://www.transparency.org/cpi",
+    "year": "2024",
+    "displayValueFormat": "{value}/100",
+    "displayLegendLow": "0 (Corrupt)",
+    "displayLegendHigh": "100 (Clean)",
+    "range": [
+      0,
+      100
+    ],
+    "rankOrder": "descending",
+    "colorScale": [
+      "#3b0764",
+      "#7e22ce",
+      "#a855f7",
+      "#d8b4fe",
+      "#faf5ff"
+    ],
+    "_colorScaleDescription": "Purple scale: #3b0764 (dark purple, most corrupt) → #7e22ce (purple) → #a855f7 (violet) → #d8b4fe (lavender) → #faf5ff (pale purple/white, cleanest)"
+  },
+  "data": [
+    {
+      "country": "Denmark",
+      "value": 90,
+      "year": 2024
+    },
+    {
+      "country": "Finland",
+      "value": 88,
+      "year": 2024
+    },
+    {
+      "country": "Singapore",
+      "value": 84,
+      "year": 2024
+    },
+    {
+      "country": "New Zealand",
+      "value": 83,
+      "year": 2024
+    },
+    {
+      "country": "Luxembourg",
+      "value": 81,
+      "year": 2024
+    },
+    {
+      "country": "Norway",
+      "value": 81,
+      "year": 2024
+    },
+    {
+      "country": "Switzerland",
+      "value": 81,
+      "year": 2024
+    },
+    {
+      "country": "Sweden",
+      "value": 80,
+      "year": 2024
+    },
+    {
+      "country": "Netherlands",
+      "value": 78,
+      "year": 2024
+    },
+    {
+      "country": "Australia",
+      "value": 77,
+      "year": 2024
+    },
+    {
+      "country": "Iceland",
+      "value": 77,
+      "year": 2024
+    },
+    {
+      "country": "Ireland",
+      "value": 77,
+      "year": 2024
+    },
+    {
+      "country": "Estonia",
+      "value": 76,
+      "year": 2024
+    },
+    {
+      "country": "Uruguay",
+      "value": 76,
+      "year": 2024
+    },
+    {
+      "country": "Canada",
+      "value": 75,
+      "year": 2024
+    },
+    {
+      "country": "Germany",
+      "value": 75,
+      "year": 2024
+    },
+    {
+      "country": "Hong Kong",
+      "value": 74,
+      "year": 2024
+    },
+    {
+      "country": "Bhutan",
+      "value": 72,
+      "year": 2024
+    },
+    {
+      "country": "Seychelles",
+      "value": 72,
+      "year": 2024
+    },
+    {
+      "country": "Japan",
+      "value": 71,
+      "year": 2024
+    },
+    {
+      "country": "United Kingdom",
+      "value": 71,
+      "year": 2024
+    },
+    {
+      "country": "Belgium",
+      "value": 69,
+      "year": 2024
+    },
+    {
+      "country": "Barbados",
+      "value": 68,
+      "year": 2024
+    },
+    {
+      "country": "United Arab Emirates",
+      "value": 68,
+      "year": 2024
+    },
+    {
+      "country": "Austria",
+      "value": 67,
+      "year": 2024
+    },
+    {
+      "country": "France",
+      "value": 67,
+      "year": 2024
+    },
+    {
+      "country": "Taiwan",
+      "value": 67,
+      "year": 2024
+    },
+    {
+      "country": "Bahamas",
+      "value": 65,
+      "year": 2024
+    },
+    {
+      "country": "United States of America",
+      "value": 65,
+      "year": 2024
+    },
+    {
+      "country": "Israel",
+      "value": 64,
+      "year": 2024
+    },
+    {
+      "country": "South Korea",
+      "value": 64,
+      "year": 2024
+    },
+    {
+      "country": "Chile",
+      "value": 63,
+      "year": 2024
+    },
+    {
+      "country": "Lithuania",
+      "value": 63,
+      "year": 2024
+    },
+    {
+      "country": "Saint Vincent and the Grenadines",
+      "value": 63,
+      "year": 2024
+    },
+    {
+      "country": "Cabo Verde",
+      "value": 62,
+      "year": 2024
+    },
+    {
+      "country": "Dominica",
+      "value": 60,
+      "year": 2024
+    },
+    {
+      "country": "Slovenia",
+      "value": 60,
+      "year": 2024
+    },
+    {
+      "country": "Latvia",
+      "value": 59,
+      "year": 2024
+    },
+    {
+      "country": "Qatar",
+      "value": 59,
+      "year": 2024
+    },
+    {
+      "country": "Saint Lucia",
+      "value": 59,
+      "year": 2024
+    },
+    {
+      "country": "Saudi Arabia",
+      "value": 59,
+      "year": 2024
+    },
+    {
+      "country": "Costa Rica",
+      "value": 58,
+      "year": 2024
+    },
+    {
+      "country": "Botswana",
+      "value": 57,
+      "year": 2024
+    },
+    {
+      "country": "Portugal",
+      "value": 57,
+      "year": 2024
+    },
+    {
+      "country": "Rwanda",
+      "value": 57,
+      "year": 2024
+    },
+    {
+      "country": "Cyprus",
+      "value": 56,
+      "year": 2024
+    },
+    {
+      "country": "Czech Republic",
+      "value": 56,
+      "year": 2024
+    },
+    {
+      "country": "Grenada",
+      "value": 56,
+      "year": 2024
+    },
+    {
+      "country": "Spain",
+      "value": 56,
+      "year": 2024
+    },
+    {
+      "country": "Fiji",
+      "value": 55,
+      "year": 2024
+    },
+    {
+      "country": "Oman",
+      "value": 55,
+      "year": 2024
+    },
+    {
+      "country": "Italy",
+      "value": 54,
+      "year": 2024
+    },
+    {
+      "country": "Bahrain",
+      "value": 53,
+      "year": 2024
+    },
+    {
+      "country": "Georgia",
+      "value": 53,
+      "year": 2024
+    },
+    {
+      "country": "Poland",
+      "value": 53,
+      "year": 2024
+    },
+    {
+      "country": "Mauritius",
+      "value": 51,
+      "year": 2024
+    },
+    {
+      "country": "Malaysia",
+      "value": 50,
+      "year": 2024
+    },
+    {
+      "country": "Vanuatu",
+      "value": 50,
+      "year": 2024
+    },
+    {
+      "country": "Greece",
+      "value": 49,
+      "year": 2024
+    },
+    {
+      "country": "Jordan",
+      "value": 49,
+      "year": 2024
+    },
+    {
+      "country": "Namibia",
+      "value": 49,
+      "year": 2024
+    },
+    {
+      "country": "Slovakia",
+      "value": 49,
+      "year": 2024
+    },
+    {
+      "country": "Armenia",
+      "value": 47,
+      "year": 2024
+    },
+    {
+      "country": "Croatia",
+      "value": 47,
+      "year": 2024
+    },
+    {
+      "country": "Kuwait",
+      "value": 46,
+      "year": 2024
+    },
+    {
+      "country": "Malta",
+      "value": 46,
+      "year": 2024
+    },
+    {
+      "country": "Montenegro",
+      "value": 46,
+      "year": 2024
+    },
+    {
+      "country": "Romania",
+      "value": 46,
+      "year": 2024
+    },
+    {
+      "country": "Benin",
+      "value": 45,
+      "year": 2024
+    },
+    {
+      "country": "Ivory Coast",
+      "value": 45,
+      "year": 2024
+    },
+    {
+      "country": "Sao Tome and Principe",
+      "value": 45,
+      "year": 2024
+    },
+    {
+      "country": "Senegal",
+      "value": 45,
+      "year": 2024
+    },
+    {
+      "country": "Jamaica",
+      "value": 44,
+      "year": 2024
+    },
+    {
+      "country": "Kosovo",
+      "value": 44,
+      "year": 2024
+    },
+    {
+      "country": "East Timor",
+      "value": 44,
+      "year": 2024
+    },
+    {
+      "country": "Bulgaria",
+      "value": 43,
+      "year": 2024
+    },
+    {
+      "country": "China",
+      "value": 43,
+      "year": 2024
+    },
+    {
+      "country": "Moldova",
+      "value": 43,
+      "year": 2024
+    },
+    {
+      "country": "Solomon Islands",
+      "value": 43,
+      "year": 2024
+    },
+    {
+      "country": "Albania",
+      "value": 42,
+      "year": 2024
+    },
+    {
+      "country": "Ghana",
+      "value": 42,
+      "year": 2024
+    },
+    {
+      "country": "Burkina Faso",
+      "value": 41,
+      "year": 2024
+    },
+    {
+      "country": "Cuba",
+      "value": 41,
+      "year": 2024
+    },
+    {
+      "country": "Hungary",
+      "value": 41,
+      "year": 2024
+    },
+    {
+      "country": "South Africa",
+      "value": 41,
+      "year": 2024
+    },
+    {
+      "country": "United Republic of Tanzania",
+      "value": 41,
+      "year": 2024
+    },
+    {
+      "country": "Trinidad and Tobago",
+      "value": 41,
+      "year": 2024
+    },
+    {
+      "country": "Kazakhstan",
+      "value": 40,
+      "year": 2024
+    },
+    {
+      "country": "Macedonia",
+      "value": 40,
+      "year": 2024
+    },
+    {
+      "country": "Suriname",
+      "value": 40,
+      "year": 2024
+    },
+    {
+      "country": "Vietnam",
+      "value": 40,
+      "year": 2024
+    },
+    {
+      "country": "Colombia",
+      "value": 39,
+      "year": 2024
+    },
+    {
+      "country": "Guyana",
+      "value": 39,
+      "year": 2024
+    },
+    {
+      "country": "Tunisia",
+      "value": 39,
+      "year": 2024
+    },
+    {
+      "country": "Zambia",
+      "value": 39,
+      "year": 2024
+    },
+    {
+      "country": "Gambia",
+      "value": 38,
+      "year": 2024
+    },
+    {
+      "country": "India",
+      "value": 38,
+      "year": 2024
+    },
+    {
+      "country": "Maldives",
+      "value": 38,
+      "year": 2024
+    },
+    {
+      "country": "Argentina",
+      "value": 37,
+      "year": 2024
+    },
+    {
+      "country": "Ethiopia",
+      "value": 37,
+      "year": 2024
+    },
+    {
+      "country": "Indonesia",
+      "value": 37,
+      "year": 2024
+    },
+    {
+      "country": "Lesotho",
+      "value": 37,
+      "year": 2024
+    },
+    {
+      "country": "Morocco",
+      "value": 37,
+      "year": 2024
+    },
+    {
+      "country": "Dominican Republic",
+      "value": 36,
+      "year": 2024
+    },
+    {
+      "country": "Republic of Serbia",
+      "value": 35,
+      "year": 2024
+    },
+    {
+      "country": "Ukraine",
+      "value": 35,
+      "year": 2024
+    },
+    {
+      "country": "Algeria",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Brazil",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Malawi",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Nepal",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Niger",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Thailand",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Turkey",
+      "value": 34,
+      "year": 2024
+    },
+    {
+      "country": "Belarus",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Bosnia and Herzegovina",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Laos",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Mongolia",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Panama",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Philippines",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Sierra Leone",
+      "value": 33,
+      "year": 2024
+    },
+    {
+      "country": "Angola",
+      "value": 32,
+      "year": 2024
+    },
+    {
+      "country": "Ecuador",
+      "value": 32,
+      "year": 2024
+    },
+    {
+      "country": "Kenya",
+      "value": 32,
+      "year": 2024
+    },
+    {
+      "country": "Sri Lanka",
+      "value": 32,
+      "year": 2024
+    },
+    {
+      "country": "Togo",
+      "value": 32,
+      "year": 2024
+    },
+    {
+      "country": "Uzbekistan",
+      "value": 32,
+      "year": 2024
+    },
+    {
+      "country": "Djibouti",
+      "value": 31,
+      "year": 2024
+    },
+    {
+      "country": "Papua New Guinea",
+      "value": 31,
+      "year": 2024
+    },
+    {
+      "country": "Peru",
+      "value": 31,
+      "year": 2024
+    },
+    {
+      "country": "Egypt",
+      "value": 30,
+      "year": 2024
+    },
+    {
+      "country": "El Salvador",
+      "value": 30,
+      "year": 2024
+    },
+    {
+      "country": "Mauritania",
+      "value": 30,
+      "year": 2024
+    },
+    {
+      "country": "Bolivia",
+      "value": 28,
+      "year": 2024
+    },
+    {
+      "country": "Guinea",
+      "value": 28,
+      "year": 2024
+    },
+    {
+      "country": "Eswatini",
+      "value": 27,
+      "year": 2024
+    },
+    {
+      "country": "Gabon",
+      "value": 27,
+      "year": 2024
+    },
+    {
+      "country": "Liberia",
+      "value": 27,
+      "year": 2024
+    },
+    {
+      "country": "Mali",
+      "value": 27,
+      "year": 2024
+    },
+    {
+      "country": "Pakistan",
+      "value": 27,
+      "year": 2024
+    },
+    {
+      "country": "Cameroon",
+      "value": 26,
+      "year": 2024
+    },
+    {
+      "country": "Iraq",
+      "value": 26,
+      "year": 2024
+    },
+    {
+      "country": "Madagascar",
+      "value": 26,
+      "year": 2024
+    },
+    {
+      "country": "Mexico",
+      "value": 26,
+      "year": 2024
+    },
+    {
+      "country": "Nigeria",
+      "value": 26,
+      "year": 2024
+    },
+    {
+      "country": "Uganda",
+      "value": 26,
+      "year": 2024
+    },
+    {
+      "country": "Guatemala",
+      "value": 25,
+      "year": 2024
+    },
+    {
+      "country": "Kyrgyzstan",
+      "value": 25,
+      "year": 2024
+    },
+    {
+      "country": "Mozambique",
+      "value": 25,
+      "year": 2024
+    },
+    {
+      "country": "Central African Republic",
+      "value": 24,
+      "year": 2024
+    },
+    {
+      "country": "Paraguay",
+      "value": 24,
+      "year": 2024
+    },
+    {
+      "country": "Bangladesh",
+      "value": 23,
+      "year": 2024
+    },
+    {
+      "country": "Republic of the Congo",
+      "value": 23,
+      "year": 2024
+    },
+    {
+      "country": "Iran",
+      "value": 23,
+      "year": 2024
+    },
+    {
+      "country": "Azerbaijan",
+      "value": 22,
+      "year": 2024
+    },
+    {
+      "country": "Honduras",
+      "value": 22,
+      "year": 2024
+    },
+    {
+      "country": "Lebanon",
+      "value": 22,
+      "year": 2024
+    },
+    {
+      "country": "Russia",
+      "value": 22,
+      "year": 2024
+    },
+    {
+      "country": "Cambodia",
+      "value": 21,
+      "year": 2024
+    },
+    {
+      "country": "Chad",
+      "value": 21,
+      "year": 2024
+    },
+    {
+      "country": "Comoros",
+      "value": 21,
+      "year": 2024
+    },
+    {
+      "country": "Guinea Bissau",
+      "value": 21,
+      "year": 2024
+    },
+    {
+      "country": "Zimbabwe",
+      "value": 21,
+      "year": 2024
+    },
+    {
+      "country": "Democratic Republic of the Congo",
+      "value": 20,
+      "year": 2024
+    },
+    {
+      "country": "Tajikistan",
+      "value": 19,
+      "year": 2024
+    },
+    {
+      "country": "Afghanistan",
+      "value": 17,
+      "year": 2024
+    },
+    {
+      "country": "Burundi",
+      "value": 17,
+      "year": 2024
+    },
+    {
+      "country": "Turkmenistan",
+      "value": 17,
+      "year": 2024
+    },
+    {
+      "country": "Haiti",
+      "value": 16,
+      "year": 2024
+    },
+    {
+      "country": "Myanmar",
+      "value": 16,
+      "year": 2024
+    },
+    {
+      "country": "North Korea",
+      "value": 15,
+      "year": 2024
+    },
+    {
+      "country": "Sudan",
+      "value": 15,
+      "year": 2024
+    },
+    {
+      "country": "Nicaragua",
+      "value": 14,
+      "year": 2024
+    },
+    {
+      "country": "Equatorial Guinea",
+      "value": 13,
+      "year": 2024
+    },
+    {
+      "country": "Eritrea",
+      "value": 13,
+      "year": 2024
+    },
+    {
+      "country": "Libya",
+      "value": 13,
+      "year": 2024
+    },
+    {
+      "country": "Yemen",
+      "value": 13,
+      "year": 2024
+    },
+    {
+      "country": "Syria",
+      "value": 12,
+      "year": 2024
+    },
+    {
+      "country": "Venezuela",
+      "value": 10,
+      "year": 2024
+    },
+    {
+      "country": "Somalia",
+      "value": 9,
+      "year": 2024
+    },
+    {
+      "country": "South Sudan",
+      "value": 8,
+      "year": 2024
+    }
+  ],
+  "aliases": {
+    "United Kingdom": [
+      "England",
+      "Great Britain",
+      "UK"
+    ],
+    "United Arab Emirates": [
+      "U.A.E.",
+      "UAE"
+    ],
+    "Russia": [
+      "Russian Federation"
+    ],
+    "South Korea": [
+      "Korea",
+      "Republic of Korea",
+      "S. Korea"
+    ],
+    "Macedonia": [
+      "North Macedonia",
+      "Republic of Macedonia"
+    ],
+    "Czech Republic": [
+      "Czechia"
+    ],
+    "Democratic Republic of the Congo": [
+      "DR Congo",
+      "Dem. Rep. Congo",
+      "DRC",
+      "Congo-Kinshasa"
+    ],
+    "Republic of the Congo": [
+      "Congo",
+      "Congo-Brazzaville",
+      "Rep. Congo"
+    ],
+    "Ivory Coast": [
+      "Côte d'Ivoire",
+      "Cote d'Ivoire"
+    ],
+    "East Timor": [
+      "Timor-Leste"
+    ],
+    "Eswatini": [
+      "Swaziland"
+    ],
+    "Cabo Verde": [
+      "Cape Verde"
+    ],
+    "Myanmar": [
+      "Burma"
+    ],
+    "Bosnia and Herzegovina": [
+      "Bosnia and Herz."
+    ],
+    "North Korea": [
+      "DPRK",
+      "Dem. Rep. Korea",
+      "Democratic People's Republic of Korea"
+    ],
+    "United Republic of Tanzania": [
+      "Tanzania"
+    ],
+    "Vietnam": [
+      "Viet Nam"
+    ],
+    "Republic of Serbia": [
+      "Serbia"
+    ],
+    "Guinea Bissau": [
+      "Guinea-Bissau"
+    ],
+    "Gambia": [
+      "The Gambia"
+    ],
+    "United States of America": [
+      "USA",
+      "United States"
+    ]
+  }
+}
