@@ -849,9 +849,11 @@
     if (isMobile) {
       const header = document.querySelector('.header-panel');
       const footer = document.querySelector('.footer-controls');
-      if (header && footer) {
-        const headerBottom = header.getBoundingClientRect().bottom;
-        const footerTop = footer.getBoundingClientRect().top;
+      const canvas = state.canvas;
+      if (header && footer && canvas) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const headerBottom = header.getBoundingClientRect().bottom - canvasRect.top;
+        const footerTop = footer.getBoundingClientRect().top - canvasRect.top;
         const availableHeight = footerTop - headerBottom;
         const availableCenter = headerBottom + availableHeight / 2;
         const canvasCenter = height / 2;
@@ -1761,9 +1763,11 @@
     if (isMobile) {
       const header = document.querySelector('.header-panel');
       const footer = document.querySelector('.footer-controls');
-      if (header && footer) {
-        const headerBottom = header.getBoundingClientRect().bottom;
-        const footerTop = footer.getBoundingClientRect().top;
+      const canvas = state.canvas;
+      if (header && footer && canvas) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const headerBottom = header.getBoundingClientRect().bottom - canvasRect.top;
+        const footerTop = footer.getBoundingClientRect().top - canvasRect.top;
         state.visualCenterY = headerBottom + (footerTop - headerBottom) / 2;
       } else {
         state.visualCenterY = state.height / 2;
