@@ -1,1 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Stonks 9800 - Stage 02</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="crt">
+    <div class="scanline"></div>
+    <div class="vignette"></div>
+    
+    <div class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <h1>STONKS 9800</h1>
+          <div class="day-display" id="dayDisplay">DAY 1 | MON</div>
+        </div>
+        <div class="header-right">
+          <div class="header-stat">
+            <div class="header-stat-label">CASH</div>
+            <div class="header-stat-value neon-green" id="headerCash">$100,000</div>
+          </div>
+        </div>
+      </header>
 
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <div class="status-item">
+          <span class="status-label">STR</span>
+          <div class="status-bar-fill stress-bar">
+            <div class="status-bar-inner" id="stressBar" style="width: 0%"></div>
+          </div>
+          <span class="status-value" id="stressValue">0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">NRG</span>
+          <div class="status-bar-fill energy-bar">
+            <div class="status-bar-inner" id="energyBar" style="width: 100%"></div>
+          </div>
+          <span class="status-value" id="energyValue">100</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">CMF</span>
+          <div class="comfort-stars" id="comfortStars">★☆☆☆☆</div>
+        </div>
+        <div class="status-item">
+          <span class="status-label">REP</span>
+          <span class="status-value neon-yellow" id="reputationValue">0</span>
+        </div>
+        <div class="status-item sentiment-indicator" id="sentimentIndicator" title="Market Sentiment">
+          <span class="status-label">MOOD</span>
+          <span class="sentiment-value" id="sentimentValue">50</span>
+          <span class="sentiment-label" id="sentimentLabel">NEUTRAL</span>
+        </div>
+        <button class="menu-btn" id="menuBtn" title="Menu">⚙️</button>
+      </div>
+
+      <!-- Market Sentiment Alert (appears when extreme) -->
+      <div class="sentiment-alert" id="sentimentAlert" style="display:none;">
+        <div class="sentiment-alert-header">
+          <span class="sentiment-alert-title" id="sentimentAlertTitle">🔴 EXTREME FEAR</span>
+          <button class="sentiment-alert-close" id="closeSentimentAlert">✕</button>
+        </div>
+        <div class="sentiment-alert-message" id="sentimentAlertMessage">Market in panic mode.</div>
+        <div class="sentiment-alert-advice" id="sentimentAlertAdvice">Historical returns: +22%</div>
+        <div class="sentiment-alert-lesson" id="sentimentAlertLesson">"Be greedy when others are fearful"</div>
+      </div>
+
+      <!-- Main Views -->
+      <div class="view-container">
+        <!-- Market View -->
+        <div class="view active" id="marketView">
+          <div id="stockList"></div>
+        </div>
+
+        <!-- Portfolio View -->
+        <div class="view" id="portfolioView">
+          <div class="portfolio-header">
+            <div class="portfolio-label">Net Worth</div>
+            <div class="portfolio-worth" id="portfolioWorth">$100,000</div>
+            <div class="portfolio-change" id="portfolioChange">+0.00% All Time</div>
+          </div>
+          
+          <!-- Portfolio Chart -->
+          <div class="portfolio-chart-container">
+            <div class="chart-label">NET WORTH HISTORY</div>
+            <div class="chart-wrapper">
+              <canvas id="portfolioChartCanvas"></canvas>
+            </div>
+          </div>
+          
+          <table class="portfolio-table">
+            <thead>
+              <tr>
+                <th>ASSET</th>
+                <th class="text-right">QTY</th>
+                <th class="text-right">VAL</th>
+                <th class="text-right">P/L</th>
+              </tr>
+            </thead>
+            <tbody id="portfolioTable"></tbody>
+          </table>
+        </div>
+
+        <!-- News View -->
+        <div class="view" id="newsView">
+          <div id="newsList"></div>
+        </div>
+
+        <!-- Journal View -->
+        <div class="view" id="journalView">
+          <!-- Sentiment Summary -->
+          <div class="journal-sentiment-section">
+            <div class="sentiment-gauge">
+              <div class="sentiment-gauge-label">MARKET SENTIMENT</div>
+              <div class="sentiment-gauge-bar">
+                <div class="sentiment-gauge-zones">
+                  <div class="zone extreme-fear"></div>
+                  <div class="zone fear"></div>
+                  <div class="zone neutral"></div>
+                  <div class="zone greed"></div>
+                  <div class="zone extreme-greed"></div>
+                </div>
+                <div class="sentiment-gauge-marker" id="sentimentMarker" style="left: 50%;"></div>
+              </div>
+              <div class="sentiment-gauge-labels">
+                <span>FEAR</span>
+                <span id="sentimentGaugeValue">50</span>
+                <span>GREED</span>
+              </div>
+              <div class="sentiment-advice" id="sentimentAdvice">
+                💡 No clear signal - trade individual setups
+              </div>
+            </div>
+          </div>
+
+          <!-- Journal Stats -->
+          <div class="journal-stats-section">
+            <div class="journal-stat">
+              <div class="journal-stat-label">Win Rate</div>
+              <div class="journal-stat-value" id="journalWinRate">0%</div>
+            </div>
+            <div class="journal-stat">
+              <div class="journal-stat-label">Profit Factor</div>
+              <div class="journal-stat-value" id="journalProfitFactor">0</div>
+            </div>
+            <div class="journal-stat">
+              <div class="journal-stat-label">Total P&L</div>
+              <div class="journal-stat-value" id="journalTotalPnL">$0</div>
+            </div>
+          </div>
+
+          <!-- Pattern Analysis -->
+          <div class="journal-patterns-section">
+            <div class="pattern-column">
+              <div class="pattern-header bad">TOP MISTAKES</div>
+              <div id="worstPatterns" class="pattern-list">
+                <div class="pattern-empty">No data yet</div>
+              </div>
+            </div>
+            <div class="pattern-column">
+              <div class="pattern-header good">TOP SUCCESSES</div>
+              <div id="bestPatterns" class="pattern-list">
+                <div class="pattern-empty">No data yet</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Trades -->
+          <div class="journal-trades-section">
+            <div class="journal-trades-header">RECENT TRADES</div>
+            <div id="recentTrades" class="journal-trades-list">
+              <div class="trade-empty">No trades yet. Start trading!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bank View -->
+        <div class="view" id="bankView">
+          <div class="bank-container">
+            <h2 class="bank-title">MEGACORP BANK</h2>
+            
+            <!-- Savings Section -->
+            <div class="bank-section">
+              <div class="bank-section-header">
+                <span class="bank-section-title">SAVINGS ACCOUNT</span>
+                <span class="bank-section-rate">0.5% / month</span>
+              </div>
+              <div class="bank-balance-display">
+                <span class="bank-balance-label">Balance:</span>
+                <span class="bank-balance-value neon-cyan" id="bankSavingsDisplay">$0</span>
+              </div>
+              <div class="bank-actions">
+                <div class="bank-input-group">
+                  <input type="number" id="depositAmount" placeholder="Amount" min="0">
+                  <button class="btn btn-success btn-small" id="depositBtn">DEPOSIT</button>
+                </div>
+                <div class="bank-input-group">
+                  <input type="number" id="withdrawAmount" placeholder="Amount" min="0">
+                  <button class="btn btn-neutral btn-small" id="withdrawBtn">WITHDRAW</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loan Section -->
+            <div class="bank-section">
+              <div class="bank-section-header">
+                <span class="bank-section-title">CORPORATE LOANS</span>
+                <span class="bank-section-rate">2% / month</span>
+              </div>
+              <div class="bank-balance-display">
+                <span class="bank-balance-label">Outstanding:</span>
+                <span class="bank-balance-value price-down" id="bankLoanDisplay">$0</span>
+              </div>
+              <div class="bank-balance-display">
+                <span class="bank-balance-label">Max Borrowing:</span>
+                <span class="bank-balance-value" id="maxLoanDisplay">$50,000</span>
+              </div>
+              <div class="bank-actions">
+                <div class="bank-input-group">
+                  <input type="number" id="borrowAmount" placeholder="Amount" min="0">
+                  <button class="btn btn-danger btn-small" id="borrowBtn">BORROW</button>
+                </div>
+                <div class="bank-input-group">
+                  <input type="number" id="repayAmount" placeholder="Amount" min="0">
+                  <button class="btn btn-success btn-small" id="repayBtn">REPAY</button>
+                </div>
+              </div>
+              <div class="bank-warning" id="loanWarning"></div>
+            </div>
+
+            <!-- Dividend Info -->
+            <div class="bank-section">
+              <div class="bank-section-header">
+                <span class="bank-section-title">DIVIDEND SCHEDULE</span>
+              </div>
+              <div class="dividend-info" id="dividendInfo">
+                <p>Next dividend payout in <span id="daysUntilDividend">90</span> days</p>
+                <p>Estimated payout: <span class="neon-green" id="estimatedDividend">$0</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lifestyle View (NEW) -->
+        <div class="view" id="lifestyleView">
+          <div class="lifestyle-container">
+            <!-- Comfort Summary -->
+            <div class="comfort-summary">
+              <h2 class="lifestyle-title">LIFESTYLE STATUS</h2>
+              <div class="comfort-display">
+                <span class="comfort-level-label">Comfort Level:</span>
+                <span class="comfort-level-value" id="comfortLevelDisplay">★☆☆☆☆</span>
+                <span class="comfort-status" id="comfortStatus">Struggling</span>
+              </div>
+              <div class="comfort-bonus">
+                <span>Stress Recovery Bonus: </span>
+                <span class="neon-green" id="stressRecoveryBonus">+0%</span>
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="lifestyle-tabs">
+              <button class="lifestyle-tab active" data-tab="property">PROPERTY</button>
+              <button class="lifestyle-tab" data-tab="vehicles">VEHICLES</button>
+              <button class="lifestyle-tab" data-tab="ceo">CEO MODE</button>
+            </div>
+
+            <!-- Property Tab -->
+            <div class="lifestyle-tab-content active" id="propertyTab">
+              <div class="owned-section">
+                <h3 class="section-subtitle">OWNED PROPERTIES</h3>
+                <div id="ownedProperties" class="property-list">
+                  <div class="empty-state">No properties owned</div>
+                </div>
+              </div>
+              <div class="market-section">
+                <h3 class="section-subtitle">PROPERTY MARKET</h3>
+                <div id="propertyMarket" class="property-list"></div>
+              </div>
+            </div>
+
+            <!-- Vehicles Tab -->
+            <div class="lifestyle-tab-content" id="vehiclesTab">
+              <div class="owned-section">
+                <h3 class="section-subtitle">YOUR GARAGE</h3>
+                <div id="ownedVehicles" class="vehicle-list">
+                  <div class="empty-state">No vehicles owned</div>
+                </div>
+              </div>
+              <div class="market-section">
+                <h3 class="section-subtitle">DEALERSHIP</h3>
+                <div id="vehicleMarket" class="vehicle-list"></div>
+              </div>
+            </div>
+
+            <!-- CEO Tab -->
+            <div class="lifestyle-tab-content" id="ceoTab">
+              <div class="ceo-status" id="ceoStatus">
+                <div class="ceo-locked">
+                  <h3 class="ceo-locked-title">CEO MODE LOCKED</h3>
+                  <p class="ceo-requirements">Requirements to unlock:</p>
+                  <ul class="ceo-req-list">
+                    <li id="ceoReqWealth">Net Worth: $10,000,000 <span class="req-status">❌</span></li>
+                    <li id="ceoReqRep">Reputation: 50+ <span class="req-status">❌</span></li>
+                    <li id="ceoReqTrades">Total Trades: 100+ <span class="req-status">❌</span></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="ceo-content hidden" id="ceoContent">
+                <h3 class="section-subtitle">YOUR COMPANY</h3>
+                <div id="companyManagement"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day Counter Display -->
+      <div class="day-info" id="dayInfo">
+        <span id="dateDisplay">Year 1 | Month 1 | Day 1</span>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="nav">
+        <button class="nav-btn active" data-view="market">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+          </svg>
+          <span>Market</span>
+        </button>
+        <button class="nav-btn" data-view="portfolio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+            <path d="M16,21 V5 a2,2 0 0 0 -2,-2 H10 a2,2 0 0 0 -2,2 V21"/>
+          </svg>
+          <span>Assets</span>
+        </button>
+        <button class="nav-btn" data-view="bank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+          <span>Bank</span>
+        </button>
+        <button class="nav-btn" data-view="lifestyle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Life</span>
+        </button>
+        <button class="nav-btn" data-view="news">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4,22 H18 a2,2 0 0 0 2,-2 V6 l-6,-4 H6 a2,2 0 0 0 -2,2 V20 a2,2 0 0 0 2,2 z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+            <line x1="8" y1="17" x2="16" y2="17"/>
+          </svg>
+          <span>News</span>
+        </button>
+        <button class="nav-btn" data-view="journal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <line x1="10" y1="9" x2="8" y2="9"/>
+          </svg>
+          <span>Journal</span>
+        </button>
+      </nav>
+
+      <!-- Next Day Button -->
+      <button class="next-day-btn" id="nextDayBtn">
+        <span class="next-day-text">NEXT DAY</span>
+        <span class="next-day-arrow">▶▶</span>
+      </button>
+    </div>
+
+    <!-- Stock Detail Overlay -->
+    <div class="detail-overlay" id="detailOverlay">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" id="detailTitle">Stock Name</div>
+          <div class="detail-desc" id="detailDesc">Description</div>
+        </div>
+        <button class="close-btn" id="closeDetail">✕</button>
+      </div>
+      <div class="detail-content">
+        <div class="detail-price-section">
+          <div class="detail-price" id="detailPrice">$0</div>
+          <div class="detail-change" id="detailChange">+0.00</div>
+        </div>
+
+        <!-- Dividend Info -->
+        <div class="detail-dividend">
+          <span class="dividend-label">Dividend Yield:</span>
+          <span class="dividend-value neon-green" id="detailDividend">0.00%</span>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-grid"></div>
+          <canvas class="chart-canvas" id="chartCanvas"></canvas>
+        </div>
+
+        <div class="holdings-grid">
+          <div class="holding-card">
+            <div class="holding-label">Your Holdings</div>
+            <div class="holding-value neon-cyan" id="detailHoldings">0</div>
+            <div class="holding-sub" id="detailHoldingsValue">Value: $0</div>
+          </div>
+          <div class="holding-card">
+            <div class="holding-label">Avg. Cost</div>
+            <div class="holding-value neon-cyan" id="detailAvgCost">$0</div>
+            <div class="holding-sub" id="detailProfitLoss">P/L: $0</div>
+          </div>
+        </div>
+
+        <!-- Trade Quantity -->
+        <div class="trade-quantity">
+          <button class="qty-btn" id="qtyMinus">−</button>
+          <input type="number" id="tradeQty" value="1" min="1">
+          <button class="qty-btn" id="qtyPlus">+</button>
+          <button class="qty-btn" id="qtyMax">MAX</button>
+        </div>
+        
+        <!-- Quantity Slider -->
+        <div class="qty-slider-container">
+          <input type="range" id="qtySlider" class="qty-slider" min="1" max="100" value="1">
+          <div class="qty-slider-labels">
+            <span>1</span>
+            <span>25%</span>
+            <span>50%</span>
+            <span>75%</span>
+            <span>MAX</span>
+          </div>
+        </div>
+
+        <!-- Trade Info Panel -->
+        <div class="trade-info-panel" id="tradeInfoPanel">
+          <div class="trade-info-row">
+            <span class="trade-info-label">Transaction:</span>
+            <span class="trade-info-value neon-yellow" id="tradeValue">$0</span>
+          </div>
+          <div class="trade-info-row">
+            <span class="trade-info-label">Est. Fees (sell):</span>
+            <span class="trade-info-value neon-pink" id="tradeFees">$0.00</span>
+          </div>
+          <div class="trade-info-row">
+            <span class="trade-info-label">% of Cash:</span>
+            <span class="trade-info-value" id="tradeCashPct">0%</span>
+          </div>
+          <div class="trade-info-row">
+            <span class="trade-info-label">% of Net Worth:</span>
+            <span class="trade-info-value" id="tradeNetWorthPct">0%</span>
+          </div>
+        </div>
+
+        <div class="trade-buttons">
+          <button class="btn btn-danger" id="sellBtn">SELL</button>
+          <button class="btn btn-success" id="buyBtn">BUY</button>
+          <button class="btn btn-warning" id="shortBtn" title="Requires 25 reputation">SHORT</button>
+          <button class="btn btn-neutral" id="coverBtn">COVER</button>
+        </div>
+        
+        <!-- Short Position Info -->
+        <div class="short-position-info" id="shortPositionInfo" style="display:none;">
+          <span>Short: <span id="shortQty">0</span> @ $<span id="shortEntry">0</span></span>
+          <span class="short-pnl" id="shortPnL">P&L: $0</span>
+        </div>
+
+        <!-- Options Trading Button -->
+        <div class="options-button-container" id="optionsButtonContainer">
+          <button class="btn btn-options" id="optionsBtn" title="Requires 30 reputation">
+            📊 OPTIONS CHAIN
+          </button>
+        </div>
+
+        <!-- Energy Cost -->
+        <div class="energy-cost-display">
+          <span>Trading Cost: <span class="neon-cyan">10 Energy</span></span>
+        </div>
+
+        <!-- Options Opportunity Alert -->
+        <div class="options-opportunity-alert" id="optionsOpportunityAlert" style="display:none;">
+          <div class="opportunity-header">
+            <span class="opportunity-type" id="opportunityType">📈 CALL OPPORTUNITY</span>
+            <span class="opportunity-confidence" id="opportunityConfidence">75%</span>
+          </div>
+          <div class="opportunity-details" id="opportunityDetails">
+            <!-- Filled by JS -->
+          </div>
+          <div class="opportunity-actions">
+            <button class="btn btn-success btn-sm" id="opportunityBuy">VIEW CHAIN</button>
+            <button class="btn btn-neutral btn-sm" id="opportunityDismiss">DISMISS</button>
+          </div>
+        </div>
+
+        <div class="analysis-section">
+          <div class="analysis-header">
+            <h3 class="analysis-title">Analyst Insight</h3>
+            <button class="btn btn-neutral" id="analyzeBtn" style="font-size:11px;padding:4px 8px;">QUERY AI</button>
+          </div>
+          <div class="analysis-content" id="analysisContent">
+            Query the AI Analyst for latest market rumors and predictions...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Property Detail Overlay -->
+    <div class="property-overlay" id="propertyOverlay">
+      <div class="property-overlay-content">
+        <div class="detail-header">
+          <div>
+            <div class="detail-title" id="propertyTitle">Property Name</div>
+            <div class="detail-desc" id="propertyType">Type</div>
+          </div>
+          <button class="close-btn" id="closeProperty">✕</button>
+        </div>
+        <div class="property-details">
+          <div class="property-stat">
+            <span class="property-stat-label">Value</span>
+            <span class="property-stat-value neon-green" id="propertyValue">$0</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Monthly Rent</span>
+            <span class="property-stat-value neon-cyan" id="propertyRent">$0</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Maintenance</span>
+            <span class="property-stat-value price-down" id="propertyMaint">$0</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Comfort Bonus</span>
+            <span class="property-stat-value neon-yellow" id="propertyComfort">+0</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Condition</span>
+            <span class="property-stat-value" id="propertyCondition">100%</span>
+          </div>
+        </div>
+        <div class="property-actions">
+          <button class="btn btn-success" id="buyPropertyBtn">BUY</button>
+          <button class="btn btn-danger hidden" id="sellPropertyBtn">SELL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicle Detail Overlay -->
+    <div class="vehicle-overlay" id="vehicleOverlay">
+      <div class="vehicle-overlay-content">
+        <div class="detail-header">
+          <div>
+            <div class="detail-title" id="vehicleTitle">Vehicle Name</div>
+            <div class="detail-desc" id="vehicleType">Type</div>
+          </div>
+          <button class="close-btn" id="closeVehicle">✕</button>
+        </div>
+        <div class="vehicle-details">
+          <div class="property-stat">
+            <span class="property-stat-label">Price</span>
+            <span class="property-stat-value neon-green" id="vehiclePrice">$0</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Comfort Bonus</span>
+            <span class="property-stat-value neon-yellow" id="vehicleComfort">+0</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Status Bonus</span>
+            <span class="property-stat-value neon-pink" id="vehicleStatus">+0 REP</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Condition</span>
+            <span class="property-stat-value" id="vehicleCondition">100%</span>
+          </div>
+          <div class="property-stat">
+            <span class="property-stat-label">Monthly Cost</span>
+            <span class="property-stat-value price-down" id="vehicleMonthlyCost">$0</span>
+          </div>
+        </div>
+        <div class="vehicle-actions">
+          <button class="btn btn-success" id="buyVehicleBtn">BUY</button>
+          <button class="btn btn-danger hidden" id="sellVehicleBtn">SELL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Morning News Overlay -->
+    <div class="morning-overlay" id="morningOverlay">
+      <div class="morning-content">
+        <h2 class="morning-title">MORNING BRIEFING</h2>
+        <div class="morning-date" id="morningDate">Day 1 | Monday</div>
+        <div class="morning-news" id="morningNews"></div>
+        <button class="btn btn-primary morning-close" id="closeMorning">BEGIN TRADING</button>
+      </div>
+    </div>
+
+    <!-- Event Overlay -->
+    <div class="event-overlay" id="eventOverlay">
+      <div class="event-content">
+        <h2 class="event-title" id="eventTitle">EVENT</h2>
+        <div class="event-body" id="eventBody"></div>
+        <button class="btn btn-primary event-close" id="closeEvent">ACKNOWLEDGE</button>
+      </div>
+    </div>
+
+    <!-- Tax Day Overlay -->
+    <div class="tax-overlay" id="taxOverlay">
+      <div class="tax-content">
+        <h2 class="tax-title">TAX ASSESSMENT</h2>
+        <div class="tax-body" id="taxBody"></div>
+        <button class="btn btn-danger tax-close" id="closeTax">PAY TAXES</button>
+      </div>
+    </div>
+
+    <!-- Options Chain Overlay -->
+    <div class="options-overlay" id="optionsOverlay">
+      <div class="options-content">
+        <button class="menu-close" id="optionsChainClose">✕</button>
+        <h2 class="options-title">📊 OPTIONS CHAIN</h2>
+        
+        <!-- Stock Info Header -->
+        <div class="options-stock-info">
+          <span class="options-stock-symbol" id="optionsSymbol">AAPL</span>
+          <span class="options-stock-price" id="optionsStockPrice">$250.00</span>
+          <span class="options-iv" id="optionsIV">IV: 32%</span>
+        </div>
+        
+        <!-- IV Warning -->
+        <div class="iv-warning" id="ivWarning" style="display:none;">
+          ⚠️ <span id="ivWarningText">Options are 2.3x overpriced!</span>
+        </div>
+        
+        <!-- Expiration Selector -->
+        <div class="options-dte-selector">
+          <span class="dte-label">EXPIRATION:</span>
+          <div class="dte-buttons" id="dteButtons">
+            <button class="dte-btn active" data-dte="7">7d</button>
+            <button class="dte-btn" data-dte="14">14d</button>
+            <button class="dte-btn" data-dte="30">30d</button>
+            <button class="dte-btn" data-dte="45">45d</button>
+            <button class="dte-btn" data-dte="60">60d</button>
+          </div>
+        </div>
+        
+        <!-- Options Chain Table -->
+        <div class="options-chain-container">
+          <div class="options-chain-header">
+            <div class="chain-col chain-calls-header">CALLS</div>
+            <div class="chain-col chain-strike-header">STRIKE</div>
+            <div class="chain-col chain-puts-header">PUTS</div>
+          </div>
+          <div class="options-chain-body" id="optionsChainBody">
+            <!-- Generated by JS -->
+          </div>
+        </div>
+        
+        <!-- Selected Option Details -->
+        <div class="selected-option-details" id="selectedOptionDetails" style="display:none;">
+          <div class="option-detail-header">
+            <span class="option-detail-type" id="selectedOptionType">CALL</span>
+            <span class="option-detail-strike" id="selectedOptionStrike">$250</span>
+          </div>
+          <div class="option-detail-row">
+            <span>Premium:</span>
+            <span class="neon-green" id="selectedOptionPremium">$8.30</span>
+            <span class="option-detail-small">($830/contract)</span>
+          </div>
+          <div class="option-detail-row">
+            <span>Delta (Δ):</span>
+            <span id="selectedOptionDelta">0.50</span>
+            <span class="option-detail-small">+$50 per $100 move</span>
+          </div>
+          <div class="option-detail-row">
+            <span>Theta (θ):</span>
+            <span class="price-down" id="selectedOptionTheta">-$0.58/day</span>
+            <span class="option-detail-small">daily decay</span>
+          </div>
+          <div class="option-detail-row">
+            <span>Days to Expiry:</span>
+            <span id="selectedOptionDTE">14</span>
+          </div>
+          
+          <!-- Quantity Selector -->
+          <div class="option-quantity">
+            <span>Contracts:</span>
+            <button class="qty-btn" id="optionQtyMinus">−</button>
+            <input type="number" id="optionQty" value="1" min="1" max="10">
+            <button class="qty-btn" id="optionQtyPlus">+</button>
+          </div>
+          
+          <div class="option-total">
+            <span>Total Cost:</span>
+            <span class="neon-yellow" id="selectedOptionTotal">$830</span>
+          </div>
+          
+          <!-- Option Trade Info -->
+          <div class="option-trade-info">
+            <div class="trade-info-row">
+              <span class="trade-info-label">Contract Fee:</span>
+              <span class="trade-info-value neon-pink" id="optionFee">$0.00</span>
+            </div>
+            <div class="trade-info-row">
+              <span class="trade-info-label">% of Cash:</span>
+              <span class="trade-info-value" id="optionCashPct">0%</span>
+            </div>
+            <div class="trade-info-row">
+              <span class="trade-info-label">% of Net Worth:</span>
+              <span class="trade-info-value" id="optionNetWorthPct">0%</span>
+            </div>
+          </div>
+          
+          <!-- Position Size Warning -->
+          <div class="position-size-warning" id="positionSizeWarning" style="display:none;">
+            ⚠️ Position is <span id="positionSizePct">15%</span> of portfolio
+          </div>
+          
+          <div class="option-actions">
+            <button class="btn btn-success" id="buyOptionBtn">BUY OPTION</button>
+          </div>
+        </div>
+        
+        <!-- Educational Tip -->
+        <div class="options-tip" id="optionsTip">
+          💡 <span id="optionsTipText">Select a strike price to see details. ATM options have highest delta.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Options Positions Panel (shown in portfolio) -->
+    <div class="options-positions-overlay" id="optionsPositionsOverlay">
+      <div class="options-positions-content">
+        <button class="menu-close" id="optionsPositionsClose">✕</button>
+        <h2 class="options-title">📋 YOUR OPTIONS</h2>
+        
+        <div class="options-positions-list" id="optionsPositionsList">
+          <!-- Generated by JS -->
+        </div>
+        
+        <div class="options-positions-summary">
+          <div class="summary-row">
+            <span>Total Value:</span>
+            <span class="neon-green" id="optionsTotalValue">$0</span>
+          </div>
+          <div class="summary-row">
+            <span>Total P&L:</span>
+            <span id="optionsTotalPnL">$0</span>
+          </div>
+          <div class="summary-row">
+            <span>Win Rate:</span>
+            <span id="optionsWinRate">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Overlay -->
+    <div class="menu-overlay" id="menuOverlay">
+      <div class="menu-content">
+        <button class="menu-close" id="menuClose">✕</button>
+        <h2 class="menu-title">⚙️ MENU</h2>
+        
+        <div class="menu-section">
+          <button class="menu-item" id="menuSave">
+            <span class="menu-icon">💾</span>
+            <span class="menu-label">SAVE GAME</span>
+          </button>
+          <button class="menu-item" id="menuLoad">
+            <span class="menu-icon">📂</span>
+            <span class="menu-label">LOAD GAME</span>
+          </button>
+        </div>
+        
+        <div class="menu-divider"></div>
+        
+        <div class="menu-section">
+          <button class="menu-item" id="menuPhenomena">
+            <span class="menu-icon">📚</span>
+            <span class="menu-label">PHENOMENA SELECTOR</span>
+          </button>
+          <button class="menu-item" id="menuTutorial">
+            <span class="menu-icon">🎓</span>
+            <span class="menu-label">TUTORIAL MODE</span>
+            <span class="menu-status" id="menuTutorialStatus">OFF</span>
+          </button>
+          <button class="menu-item" id="menuCRT">
+            <span class="menu-icon">📺</span>
+            <span class="menu-label">CRT EFFECTS</span>
+            <span class="menu-status" id="menuCRTStatus">ON</span>
+          </button>
+        </div>
+        
+        <div class="menu-divider"></div>
+        
+        <div class="menu-section">
+          <button class="menu-item" id="menuAchievements">
+            <span class="menu-icon">🏆</span>
+            <span class="menu-label">ACHIEVEMENTS</span>
+          </button>
+          <button class="menu-item" id="menuStats">
+            <span class="menu-icon">📊</span>
+            <span class="menu-label">STATISTICS</span>
+          </button>
+        </div>
+        
+        <div class="menu-divider"></div>
+        
+        <div class="menu-section">
+          <button class="menu-item menu-item-danger" id="menuQuit">
+            <span class="menu-icon">🚪</span>
+            <span class="menu-label">QUIT TO TITLE</span>
+          </button>
+        </div>
+        
+        <div class="menu-version">Version 0.2.0</div>
+      </div>
+    </div>
+
+    <!-- Save Game Overlay -->
+    <div class="save-overlay" id="saveOverlay">
+      <div class="save-content">
+        <button class="menu-close" id="saveClose">✕</button>
+        <h2 class="menu-title">💾 SAVE GAME</h2>
+        
+        <div class="save-slots" id="saveSlots">
+          <!-- Generated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Load Game Overlay -->
+    <div class="save-overlay" id="loadOverlay">
+      <div class="save-content">
+        <button class="menu-close" id="loadClose">✕</button>
+        <h2 class="menu-title">📂 LOAD GAME</h2>
+        
+        <div class="save-slots" id="loadSlots">
+          <!-- Generated by JS -->
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Phenomena Selector Overlay -->
+    <div class="phenomena-overlay" id="phenomenaOverlay">
+      <div class="phenomena-content">
+        <button class="menu-close" id="phenomenaClose">✕</button>
+        <h2 class="menu-title">📚 PHENOMENA</h2>
+        
+        <!-- Preset buttons -->
+        <div class="phenomena-presets">
+          <button class="preset-btn" data-preset="beginner">Beginner</button>
+          <button class="preset-btn" data-preset="intermediate">Intermediate</button>
+          <button class="preset-btn" data-preset="advanced">Advanced</button>
+          <button class="preset-btn" data-preset="all">All</button>
+          <button class="preset-btn" data-preset="none">None</button>
+        </div>
+        
+        <!-- Filter by predictability -->
+        <div class="phenomena-filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="predictable">🟢</button>
+          <button class="filter-btn" data-filter="partial">🟡</button>
+          <button class="filter-btn" data-filter="unpredictable">🔴</button>
+        </div>
+        
+        <!-- Scrollable list -->
+        <div class="phenomena-list" id="phenomenaList">
+          <!-- Generated by JS -->
+        </div>
+        
+        <!-- Status bar -->
+        <div class="phenomena-status">
+          <span id="phenomenaCount">0/23 enabled</span>
+          <button class="btn btn-success phenomena-done" id="phenomenaDone">APPLY</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Random Event Overlay -->
+    <div class="random-event-overlay" id="randomEventOverlay">
+      <div class="random-event-content">
+        <h2 class="event-title" id="randomEventTitle">LIFE EVENT</h2>
+        <div class="event-body" id="randomEventBody"></div>
+        <div class="event-choices" id="randomEventChoices"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load modules in order -->
+  <script src="constants.js"></script>
+  <script src="state.js"></script>
+  <script src="utils.js"></script>
+  <script src="market.js"></script>
+  <script src="bank.js"></script>
+  <script src="property.js"></script>
+  <script src="vehicles.js"></script>
+  <script src="options.js"></script>
+  <script src="journal.js"></script>
+  <script src="tutorial.js"></script>
+  <script src="events.js"></script>
+  <script src="render.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
