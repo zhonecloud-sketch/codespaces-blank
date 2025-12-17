@@ -629,49 +629,49 @@ const CHOICE_EVENTS = [
 // TIER 2: Good Educational - Clear signals, some complexity
 // TIER 3: Moderate - Requires experience, harder to time
 // TIER 4: Advanced/Random - Unpredictable or difficult
+// eventType field maps to gameSettings.enabledEvents keys
 const PHENOMENA = [
-  // Tier 1 - Highly Educational (IDs: 10, 16, 19)
-  { id: 10, name: 'Short Seller Report', desc: 'Multi-wave attacks with clear escalation signals', pred: 'predictable', icon: '🟢', tier: 1 },
-  { id: 16, name: 'Insider Buying', desc: 'Executives buying = strong bullish signal', pred: 'predictable', icon: '🟢', tier: 1 },
-  { id: 19, name: 'Index Rebalance', desc: 'Forced buying/selling with known timeline', pred: 'predictable', icon: '🟢', tier: 1 },
+  // Tier 1 - Highly Educational
+  { id: 10, eventType: 'short_seller_report', name: 'Short Seller Report', desc: 'Multi-wave attacks with clear escalation signals', pred: 'predictable', icon: '🟢', tier: 1 },
+  { id: 16, eventType: 'insider_buying', name: 'Insider Buying', desc: 'Executives buying = strong bullish signal', pred: 'predictable', icon: '🟢', tier: 1 },
+  { id: 19, eventType: 'index_rebalancing', name: 'Index Rebalance', desc: 'Forced buying/selling with known timeline', pred: 'predictable', icon: '🟢', tier: 1 },
   
-  // Tier 2 - Good Educational (IDs: 5, 6, 7, 17)
-  { id: 6, name: 'Dead Cat Bounce', desc: 'Multiple false bounces after crash', pred: 'partial', icon: '🟡', tier: 2 },
-  { id: 17, name: 'Stock Split', desc: 'Clear mechanics, sentiment-driven', pred: 'predictable', icon: '🟢', tier: 2 },
-  { id: 5, name: 'Short Squeeze', desc: 'High short interest + catalyst = squeeze', pred: 'partial', icon: '🟡', tier: 2 },
-  { id: 7, name: 'FOMO Rally', desc: 'Identifiable euphoria phases', pred: 'predictable', icon: '🟢', tier: 2 },
+  // Tier 2 - Good Educational
+  { id: 6, eventType: 'dead_cat_bounce', name: 'Dead Cat Bounce', desc: 'Multiple false bounces after crash', pred: 'partial', icon: '🟡', tier: 2 },
+  { id: 17, eventType: 'stock_split', name: 'Stock Split', desc: 'Clear mechanics, sentiment-driven', pred: 'predictable', icon: '🟢', tier: 2 },
+  { id: 5, eventType: 'short_squeeze', name: 'Short Squeeze', desc: 'High short interest + catalyst = squeeze', pred: 'partial', icon: '🟡', tier: 2 },
+  { id: 7, eventType: 'fomo_rally', name: 'FOMO Rally', desc: 'Identifiable euphoria phases', pred: 'predictable', icon: '🟢', tier: 2 },
   
-  // Tier 3 - Moderate (IDs: 8, 18, 21, 24)
-  { id: 24, name: 'Institutional Manipulation', desc: 'Hard to detect, high failure rate (~40%)', pred: 'partial', icon: '🟡', tier: 3 },
-  { id: 18, name: 'Analyst Rating', desc: 'Upgrades/downgrades, short-lived impact', pred: 'partial', icon: '🟡', tier: 3 },
-  { id: 8, name: 'Capitulation', desc: 'Mass panic - hard to time bottom', pred: 'partial', icon: '🟡', tier: 3 },
-  { id: 21, name: 'Tax Loss Harvest', desc: 'Calendar-based, weak signals', pred: 'partial', icon: '🟡', tier: 3 },
+  // Tier 3 - Moderate
+  { id: 24, eventType: 'institutional_manipulation', name: 'Institutional Manipulation', desc: 'Hard to detect, high failure rate (~40%)', pred: 'partial', icon: '🟡', tier: 3 },
+  { id: 18, eventType: 'analyst', name: 'Analyst Rating', desc: 'Upgrades/downgrades, short-lived impact', pred: 'partial', icon: '🟡', tier: 3 },
+  { id: 8, eventType: 'capitulation', name: 'Capitulation', desc: 'Mass panic - hard to time bottom', pred: 'partial', icon: '🟡', tier: 3 },
+  { id: 21, eventType: 'tax_loss_harvesting', name: 'Tax Loss Harvest', desc: 'Calendar-based, weak signals', pred: 'partial', icon: '🟡', tier: 3 },
   
   // Tier 4 - Advanced/Random
-  { id: 1, name: 'EPS Surprise', desc: 'Earnings beat/miss expectations', pred: 'partial', icon: '🟡', tier: 4 },
-  { id: 2, name: 'Sell the News', desc: 'Price drops on good news if priced in', pred: 'partial', icon: '🟡', tier: 4 },
-  { id: 3, name: 'Volume Spike', desc: 'Unusual volume - ambiguous signal', pred: 'partial', icon: '🟡', tier: 4 },
-  { id: 4, name: 'Overreaction', desc: 'Extreme moves tend to reverse', pred: 'partial', icon: '🟡', tier: 4 },
-  { id: 9, name: 'Mean Reversion', desc: 'Prices return to average over time', pred: 'predictable', icon: '🟢', tier: 4 },
-  { id: 11, name: 'Sector Rotation', desc: 'Money flows between sectors - gradual', pred: 'partial', icon: '🟡', tier: 4 },
-  { id: 12, name: 'Dividend Trap', desc: 'High yield masks troubled company', pred: 'unpredictable', icon: '🔴', tier: 4 },
-  { id: 13, name: 'Gap Up/Down', desc: 'Already priced in by market open', pred: 'unpredictable', icon: '🔴', tier: 4 },
-  { id: 14, name: 'Correlation Break', desc: 'Normally linked stocks diverge', pred: 'unpredictable', icon: '🔴', tier: 4 },
-  { id: 15, name: 'Liquidity Crisis', desc: 'Selling begets more selling', pred: 'unpredictable', icon: '🔴', tier: 4 },
-  { id: 20, name: 'Window Dressing', desc: 'Quarter-end fund repositioning', pred: 'partial', icon: '🟡', tier: 4 },
-  { id: 22, name: 'Earnings Whisper', desc: 'Unofficial expectations differ', pred: 'unpredictable', icon: '🔴', tier: 4 },
-  { id: 23, name: 'Circuit Breaker', desc: 'Emergency halt - not tradeable', pred: 'unpredictable', icon: '🔴', tier: 4 }
+  { id: 1, eventType: 'basic_news', name: 'Basic News', desc: 'Random daily news without telltales', pred: 'partial', icon: '🟡', tier: 4 },
+  { id: 11, eventType: 'sector_rotation', name: 'Sector Rotation', desc: 'Money flows between sectors - gradual', pred: 'partial', icon: '🟡', tier: 4 },
+  { id: 12, eventType: 'dividend_trap', name: 'Dividend Trap', desc: 'High yield masks troubled company', pred: 'unpredictable', icon: '🔴', tier: 4 },
+  { id: 13, eventType: 'gap_up', name: 'Gap Up/Down', desc: 'Already priced in by market open', pred: 'unpredictable', icon: '🔴', tier: 4 },
+  { id: 14, eventType: 'correlation_breakdown', name: 'Correlation Break', desc: 'Normally linked stocks diverge', pred: 'unpredictable', icon: '🔴', tier: 4 },
+  { id: 15, eventType: 'liquidity_crisis', name: 'Liquidity Crisis', desc: 'Selling begets more selling', pred: 'unpredictable', icon: '🔴', tier: 4 },
+  { id: 20, eventType: 'window_dressing', name: 'Window Dressing', desc: 'Quarter-end fund repositioning', pred: 'partial', icon: '🟡', tier: 4 },
+  { id: 22, eventType: 'earnings_whisper', name: 'Earnings Whisper', desc: 'Unofficial expectations differ', pred: 'unpredictable', icon: '🔴', tier: 4 },
+  { id: 23, eventType: 'circuit_breaker', name: 'Circuit Breaker', desc: 'Emergency halt - not tradeable', pred: 'unpredictable', icon: '🔴', tier: 4 }
 ];
 
 // Updated presets based on tier system
+// IDs map to: 10=short_seller, 16=insider, 19=index, 6=deadcat, 17=split, 5=squeeze, 7=fomo
+//             24=manipulation, 18=analyst, 8=capitulation, 21=tax_loss
+//             1=basic_news, 11=sector, 12=dividend, 13=gap, 14=correlation, 15=liquidity, 20=window, 22=whisper, 23=circuit
 const PHENOMENA_PRESETS = {
   // Tier 1 only - Best for learning
-  beginner: [10, 16, 19, 24],
+  beginner: [10, 16, 19],
   // Tier 1 + 2 - Good educational mix (DEFAULT)
-  intermediate: [5, 6, 7, 10, 16, 17, 19, 24],
+  intermediate: [5, 6, 7, 10, 16, 17, 19],
   // Tier 1-3 - More challenging
   advanced: [5, 6, 7, 8, 10, 16, 17, 18, 19, 21, 24],
   // All phenomena
-  all: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+  all: [1, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
   none: []
 };

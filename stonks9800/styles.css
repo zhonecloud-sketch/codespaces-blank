@@ -340,7 +340,7 @@ body {
   padding-top: 6px;
   margin-top: 4px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 3px;
 }
 
@@ -1906,29 +1906,26 @@ body {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: rgba(0, 0, 0, 0.98);
-  padding: 20px;
-  align-items: center;
-  justify-content: center;
+  background: var(--color-bg);
+  overflow-y: auto;
   animation: fadeIn 0.2s ease;
 }
 
 .menu-overlay.active,
 .save-overlay.active,
 .settings-overlay.active {
-  display: flex;
+  display: block;
 }
 
 .menu-content,
 .save-content,
 .settings-content {
-  max-width: 360px;
+  max-width: 480px;
   width: 100%;
+  margin: 0 auto;
   position: relative;
-  background: rgba(10, 10, 20, 0.9);
-  border: 2px solid var(--color-cyan);
-  padding: 24px;
-  box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+  padding: 16px;
+  min-height: 100%;
 }
 
 .menu-close {

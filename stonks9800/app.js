@@ -661,7 +661,7 @@ function deleteSave(slotIndex) {
 
 const defaultSettings = {
   crtEffects: true,
-  tutorialMode: false,  // Educational hints for all events
+  tutorialMode: true,  // Educational hints for all events (ON by default)
   enabledEvents: null   // Will be populated from EVENT_TIERS defaults
 };
 
@@ -866,6 +866,16 @@ function loadEnabledPhenomena() {
   if (saved) {
     enabledPhenomena = JSON.parse(saved);
   }
+  
+  // Sync from gameSettings.enabledEvents if available (ensures UI matches actual state)
+  if (typeof PHENOMENA !== 'undefined' && gameSettings && gameSettings.enabledEvents) {
+    enabledPhenomena = [];
+    PHENOMENA.forEach(p => {
+      if (p.eventType && gameSettings.enabledEvents[p.eventType] === true) {
+        enabledPhenomena.push(p.id);
+      }
+    });
+  }
 }
 
 function saveEnabledPhenomena() {
@@ -885,6 +895,17 @@ function closePhenomenaSelector() {
 }
 
 function applyPhenomenaSelection() {
+  // Sync enabledPhenomena UI selections to gameSettings.enabledEvents
+  // This connects the phenomena selector to the actual event system
+  if (typeof PHENOMENA !== 'undefined' && gameSettings.enabledEvents) {
+    PHENOMENA.forEach(p => {
+      if (p.eventType) {
+        gameSettings.enabledEvents[p.eventType] = enabledPhenomena.includes(p.id);
+      }
+    });
+    saveSettings();
+  }
+  
   saveEnabledPhenomena();
   closePhenomenaSelector();
   showEvent("Phenomena Updated", `${enabledPhenomena.length} phenomena enabled`);
