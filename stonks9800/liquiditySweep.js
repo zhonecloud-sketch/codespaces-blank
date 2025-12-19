@@ -91,7 +91,7 @@ const LiquiditySweep = (function() {
   // ========== STATE TRACKING ==========
   
   // Track active sweeps per stock
-  // Key: stock.ticker, Value: sweep state object
+  // Key: stock.symbol, Value: sweep state object
   const activeSweeps = new Map();
 
   // ========== CORE FUNCTIONS ==========
@@ -233,7 +233,7 @@ const LiquiditySweep = (function() {
     const supportInfo = options.supportInfo || detectSupportLevel(stock);
     
     if (!supportInfo) {
-      console.warn(`[LiquiditySweep] No support level found for ${stock.ticker}`);
+      console.warn(`[LiquiditySweep] No support level found for ${stock.symbol}`);
       return null;
     }
 
@@ -264,7 +264,7 @@ const LiquiditySweep = (function() {
     );
 
     const sweep = {
-      ticker: stock.ticker,
+      symbol: stock.symbol,
       phase: 'sweep',
       day: 0,
       magnitude: magnitude,
@@ -319,7 +319,7 @@ const LiquiditySweep = (function() {
       willSucceed: null // Determined at entry point
     };
 
-    activeSweeps.set(stock.ticker, sweep);
+    activeSweeps.set(stock.symbol, sweep);
     stock.liquiditySweep = sweep;
     
     return sweep;
@@ -335,7 +335,7 @@ const LiquiditySweep = (function() {
     sweep.day++;
 
     const result = {
-      ticker: stock.ticker,
+      symbol: stock.symbol,
       day: sweep.day,
       phase: sweep.phase,
       priceChange: 0,
@@ -357,7 +357,7 @@ const LiquiditySweep = (function() {
       case 'complete':
         // Clean up
         delete stock.liquiditySweep;
-        activeSweeps.delete(stock.ticker);
+        activeSweeps.delete(stock.symbol);
         return result;
     }
 
@@ -400,7 +400,7 @@ const LiquiditySweep = (function() {
         result.news = {
           type: 'liquidity_sweep',
           phase: 'sweep',
-          headline: `${stock.ticker} CRASHES through key support on massive volume`,
+          headline: `${stock.symbol} CRASHES through key support on massive volume`,
           body: `Stock plunges ${Math.abs(dailyDrop * 100).toFixed(1)}% as stop-losses trigger. ` +
                 `Key $${sweep.supportLevel.toFixed(2)} support breached on ${volumeInfo.volumeMultiple.toFixed(1)}x normal volume.`,
           sentiment: -0.8,
@@ -468,7 +468,7 @@ const LiquiditySweep = (function() {
         result.news = {
           type: 'liquidity_sweep',
           phase: 'recovery',
-          headline: `${stock.ticker} RECLAIMS support - "Failed breakdown" confirmed`,
+          headline: `${stock.symbol} RECLAIMS support - "Failed breakdown" confirmed`,
           body: `Stock surges back above $${sweep.supportLevel.toFixed(2)} support. ` +
                 `Classic "Wyckoff Spring" pattern: ${sweep.goldStandardCount}/4 Gold Standard criteria met.`,
           sentiment: 0.7,
@@ -507,7 +507,7 @@ const LiquiditySweep = (function() {
           result.news = {
             type: 'liquidity_sweep',
             phase: 'continuation',
-            headline: `${stock.ticker} continues rally after successful sweep reversal`,
+            headline: `${stock.symbol} continues rally after successful sweep reversal`,
             body: `Stock up ${(totalGain * 100).toFixed(1)}% from sweep low. ` +
                   `Institutional accumulation confirmed as "liquidity vacuum" propels price higher.`,
             sentiment: 0.6,
@@ -524,7 +524,7 @@ const LiquiditySweep = (function() {
           result.news = {
             type: 'liquidity_sweep',
             phase: 'failed',
-            headline: `${stock.ticker} sweep reversal FAILS - support becomes resistance`,
+            headline: `${stock.symbol} sweep reversal FAILS - support becomes resistance`,
             body: `Stock unable to hold above reclaimed support. ` +
                   `Only ${sweep.goldStandardCount}/4 criteria met - probability was ${(sweep.currentProbability * 100).toFixed(0)}%.`,
             sentiment: -0.5,
@@ -542,7 +542,7 @@ const LiquiditySweep = (function() {
       result.news = {
         type: 'liquidity_sweep',
         phase: 'complete',
-        headline: `${stock.ticker} liquidity sweep event complete`,
+        headline: `${stock.symbol} liquidity sweep event complete`,
         body: sweep.willSucceed ?
           `Successful reversal: +${(finalGain * 100).toFixed(1)}% gain. Gold Standard (${sweep.goldStandardCount}/4) delivered.` :
           `Failed reversal: ${(finalGain * 100).toFixed(1)}% result. Only ${sweep.goldStandardCount}/4 criteria met.`,
@@ -630,7 +630,7 @@ const LiquiditySweep = (function() {
         newsArray.push({
           type: 'liquidity_sweep',
           phase: 'setup',
-          headline: `${stock.ticker} tests critical support at $${supportInfo.level.toFixed(2)}`,
+          headline: `${stock.symbol} tests critical support at $${supportInfo.level.toFixed(2)}`,
           body: `Stock approaching ${supportInfo.touchCount}-touch support level. ` +
                 `Watch for potential "stop-run" reversal pattern.`,
           sentiment: -0.3,

@@ -362,7 +362,7 @@ function renderNews() {
           // Find the related stock for context
           let relatedStock = null;
           if (item.relatedStock && typeof stocks !== 'undefined') {
-            relatedStock = stocks.find(s => s.ticker === item.relatedStock);
+            relatedStock = stocks.find(s => s.symbol === item.relatedStock);
           }
           
           const detailedHint = getDetailedTradingHint(item, relatedStock);

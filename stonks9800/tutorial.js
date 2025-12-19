@@ -2624,7 +2624,7 @@ function getDetailedTradingHint(newsItem, stock) {
     // Add stock-specific context if available
     if (stock) {
         result.stockContext = {
-            ticker: stock.ticker,
+            symbol: stock.symbol,
             currentPrice: stock.price,
             priceAtEventStart: stock.priceAtEventStart || stock.priceAtCrashStart || stock.priceAtManipulationStart || stock.price,
             phase: stock.crashPhase || stock.manipulationPhase || null,
@@ -2716,7 +2716,7 @@ function formatDetailedHint(hint) {
     if (hint.stockContext) {
         output.push('\n📈 CURRENT STATUS:');
         const ctx = hint.stockContext;
-        output.push(`  Stock: ${ctx.ticker} @ $${ctx.currentPrice.toFixed(2)}`);
+        output.push(`  Stock: ${ctx.symbol} @ $${ctx.currentPrice.toFixed(2)}`);
         if (ctx.phase) output.push(`  Phase: ${ctx.phase}`);
         if (ctx.waveNumber) output.push(`  Wave/Bounce #: ${ctx.waveNumber}`);
         if (ctx.daysRemaining) output.push(`  Days Remaining: ~${ctx.daysRemaining}`);

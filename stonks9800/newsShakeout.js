@@ -232,7 +232,7 @@ const NewsShakeout = (function() {
     const gapFillGain = (gapFillTarget - stock.price * (1 + panicDrop)) / (stock.price * (1 + panicDrop));
 
     const shakeout = {
-      ticker: stock.ticker,
+      symbol: stock.symbol,
       phase: 'panic',
       day: 0,
       magnitude: magnitude,
@@ -302,7 +302,7 @@ const NewsShakeout = (function() {
     });
     shakeout.currentProbability = Math.max(0.10, Math.min(0.90, shakeout.currentProbability));
 
-    activeShakeouts.set(stock.ticker, shakeout);
+    activeShakeouts.set(stock.symbol, shakeout);
     stock.newsShakeout = shakeout;
     
     return shakeout;
@@ -318,7 +318,7 @@ const NewsShakeout = (function() {
     shakeout.day++;
 
     const result = {
-      ticker: stock.ticker,
+      symbol: stock.symbol,
       day: shakeout.day,
       phase: shakeout.phase,
       priceChange: 0,
@@ -344,7 +344,7 @@ const NewsShakeout = (function() {
         // Clean up and set cooldown
         stock.newsShakeoutCooldown = EVENT_CONFIG.cooldownDays;
         delete stock.newsShakeout;
-        activeShakeouts.delete(stock.ticker);
+        activeShakeouts.delete(stock.symbol);
         return result;
     }
 
@@ -378,9 +378,9 @@ const NewsShakeout = (function() {
     // Empirical NLP: "Sentiment Ghost" - Fear without new fact (Tetlock 2007)
     // Keywords: "Fears," "Concerns," "Worries," "Uncertainty," "Plunges," "Shadows," "Rumors"
     const softInfoHeadlines = [
-      `${stock.ticker} PLUNGES ${Math.abs(shakeout.panicDrop * 100).toFixed(0)}% amid ${formatNewsType(shakeout.newsType)} FEARS`,
-      `${stock.ticker} shares tumble as CONCERNS over ${formatNewsType(shakeout.newsType)} mount`,
-      `UNCERTAINTY: ${stock.ticker} plunges ${Math.abs(shakeout.panicDrop * 100).toFixed(0)}% on ${formatNewsType(shakeout.newsType)} WORRIES`
+      `${stock.symbol} PLUNGES ${Math.abs(shakeout.panicDrop * 100).toFixed(0)}% amid ${formatNewsType(shakeout.newsType)} FEARS`,
+      `${stock.symbol} shares tumble as CONCERNS over ${formatNewsType(shakeout.newsType)} mount`,
+      `UNCERTAINTY: ${stock.symbol} plunges ${Math.abs(shakeout.panicDrop * 100).toFixed(0)}% on ${formatNewsType(shakeout.newsType)} WORRIES`
     ];
     const panicHeadline = softInfoHeadlines[Math.floor(Math.random() * softInfoHeadlines.length)];
     
@@ -436,7 +436,7 @@ const NewsShakeout = (function() {
       result.news = {
         type: 'news_shakeout',
         phase: 'stabilization',
-        headline: `${stock.ticker} volatile as traders assess damage`,
+        headline: `${stock.symbol} volatile as traders assess damage`,
         body: `Day 2: Stock stabilizing after yesterday's panic. Watching for continuation or reversal.`,
         sentiment: -0.3,
         telltale: '⏳ WAIT: Three-Day Rule - forced selling takes 48-72 hours to clear',
@@ -481,7 +481,7 @@ const NewsShakeout = (function() {
         result.news = {
           type: 'news_shakeout',
           phase: 'stabilization',
-          headline: `${stock.ticker} shows signs of stabilization`,
+          headline: `${stock.symbol} shows signs of stabilization`,
           body: `Day 3: Stock closes higher than Day 2 and holds above panic low. ` +
                 `${shakeout.goldStandardCount}/4 Gold Standard criteria met. ` +
                 `RSI at ${shakeout.currentRSI.toFixed(0)}.`,
@@ -496,7 +496,7 @@ const NewsShakeout = (function() {
         if (shakeout.newsType === 'analyst_downgrade' && Math.abs(shakeout.panicDrop) >= 0.20) {
           result.news.institutionalTrap = {
             detected: true,
-            headline: `📉 LATE DOWNGRADE TRAP: Analyst cuts ${stock.ticker} AFTER ${Math.abs(shakeout.panicDrop * 100).toFixed(0)}% drop`,
+            headline: `📉 LATE DOWNGRADE TRAP: Analyst cuts ${stock.symbol} AFTER ${Math.abs(shakeout.panicDrop * 100).toFixed(0)}% drop`,
             lesson: 'Empirical: Late downgrades flush final retail sellers. If stock RISES on Sell rating = 85% reversal confirmed.'
           };
         }
@@ -515,7 +515,7 @@ const NewsShakeout = (function() {
       result.news = {
         type: 'news_shakeout',
         phase: 'stabilization',
-        headline: `${stock.ticker} fails to stabilize - caution warranted`,
+        headline: `${stock.symbol} fails to stabilize - caution warranted`,
         body: `Stock making new lows, stabilization pattern NOT confirmed. High risk of value trap.`,
         sentiment: -0.5,
         telltale: '⚠️ FAILED STABILIZATION: Price keeps falling - this may be terminal'
@@ -537,7 +537,7 @@ const NewsShakeout = (function() {
     result.news = {
       type: 'news_shakeout',
       phase: 'entry',
-      headline: `${stock.ticker} confirms reversal pattern`,
+      headline: `${stock.symbol} confirms reversal pattern`,
       body: `Entry signal triggered. Target: Gap fill to $${shakeout.gapFillTarget.toFixed(2)} (+${(shakeout.gapFillGain * 100).toFixed(0)}%)`,
       sentiment: 0.5,
       telltale: shakeout.willSucceed ?
@@ -574,7 +574,7 @@ const NewsShakeout = (function() {
           result.news = {
             type: 'news_shakeout',
             phase: 'recovery',
-            headline: `${stock.ticker} recovery gaining momentum - 50% gap fill`,
+            headline: `${stock.symbol} recovery gaining momentum - 50% gap fill`,
             body: `V-bottom playing out. Stock has recovered half the panic drop. RSI now ${shakeout.currentRSI.toFixed(0)}.`,
             sentiment: 0.6,
             telltale: '📈 HOLD: Gap fill on track - De Bondt & Thaler overreaction reversal confirmed'
@@ -586,7 +586,7 @@ const NewsShakeout = (function() {
           result.news = {
             type: 'news_shakeout',
             phase: 'recovery',
-            headline: `${stock.ticker} completes GAP FILL - overreaction fully reversed`,
+            headline: `${stock.symbol} completes GAP FILL - overreaction fully reversed`,
             body: `Stock returns to pre-panic level. Classic News Shakeout pattern complete. Tetlock (2007): Reversal within ${shakeout.day} days.`,
             sentiment: 0.8,
             telltale: '🎯 TARGET HIT: Gap filled - take profits or trail stop'
@@ -603,7 +603,7 @@ const NewsShakeout = (function() {
           result.news = {
             type: 'news_shakeout',
             phase: 'recovery',
-            headline: `${stock.ticker} recovery stalls - value trap risk`,
+            headline: `${stock.symbol} recovery stalls - value trap risk`,
             body: `Bounce failing to gain traction. News may be more terminal than initially thought.`,
             sentiment: -0.4,
             telltale: '⚠️ VALUE TRAP: Recovery failing - not a true shakeout'
@@ -622,7 +622,7 @@ const NewsShakeout = (function() {
       result.news = {
         type: 'news_shakeout',
         phase: 'complete',
-        headline: `${stock.ticker} news shakeout event complete`,
+        headline: `${stock.symbol} news shakeout event complete`,
         body: shakeout.willSucceed ?
           `Successful reversal: +${(totalGain * 100).toFixed(1)}% from panic low. ${(gapFillPercent * 100).toFixed(0)}% gap fill achieved.` :
           `Failed reversal: Only ${(gapFillPercent * 100).toFixed(0)}% gap fill. News was more impactful than expected.`,
@@ -797,7 +797,7 @@ const NewsShakeout = (function() {
         isHighestVolume: true
       };
       
-      console.log(`[NEWS SHAKEOUT] Proactive trigger for ${stock.symbol || stock.ticker}: ${newsType}, drop ${(panicDrop * 100).toFixed(1)}%, volume ${volumeMultiple.toFixed(1)}x`);
+      console.log(`[NEWS SHAKEOUT] Proactive trigger for ${stock.symbol || stock.symbol}: ${newsType}, drop ${(panicDrop * 100).toFixed(1)}%, volume ${volumeMultiple.toFixed(1)}x`);
       
       // Trigger the shakeout
       const shakeout = triggerNewsShakeout(stock, {
