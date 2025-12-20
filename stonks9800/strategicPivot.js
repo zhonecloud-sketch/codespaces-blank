@@ -344,6 +344,41 @@ const StrategicPivot = (function() {
     return (stock.isMeme || stock.volatility > 0.05) ? 1.5 : 1.0;
   }
 
+  // ========== DD-002: STANDARDIZED PRICE EVENT API ==========
+  /**
+   * CRITICAL: Call this function for EVERY phase that affects stock price.
+   * This ensures GUI/log/market consistency by setting all required properties.
+   * 
+   * @param {Object} stock - The stock object
+   * @param {number} priceChange - The percentage change (e.g., -0.15 for -15%)
+   * @param {string} phaseName - Name for logging (e.g., 'ANNOUNCEMENT', 'EXECUTION')
+   * @param {string} extraLogInfo - Additional info for log string
+   * @returns {Object} { expectedPrice, logString } for consistent logging
+   * 
+   * SETS ON STOCK:
+   * - crashTransitionEffect: For market.js DD-001 pure transition
+   * - eventExpectedPrice: For GUI validation
+   * - eventExpectedDelta: For percentage validation
+   */
+  function setPriceEvent(stock, priceChange, phaseName, extraLogInfo = '') {
+    // Calculate expected price with proper rounding (matches market.js)
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    
+    // Calculate actual delta after rounding (matches what render.js shows)
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set ALL required properties atomically
+    stock.crashTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;  // Use actual delta after rounding
+    
+    // Generate standardized log string with ACTUAL delta (matches GUI)
+    const deltaStr = (actualDelta * 100).toFixed(1);
+    const logString = `[PIVOT] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${deltaStr}%] ${extraLogInfo}`;
+    
+    return { expectedPrice, priceChange: actualDelta, logString };
+  }
+
   // ========== PIVOT CLASSIFICATION ==========
   /**
    * Determine pivot type based on probability distribution
@@ -519,15 +554,12 @@ const StrategicPivot = (function() {
     const impact = CONSTANTS.PRICE_IMPACT.announcement[pivotType];
     const memeMultiplier = getMemeMultiplier(stock);
     const actualImpact = (impact.min + random() * (impact.max - impact.min)) * memeMultiplier;
-    stock.crashTransitionEffect = actualImpact;
-    stock.sentimentOffset = (stock.sentimentOffset || 0) - 0.03 * memeMultiplier;
-
-    // Store expected outcome for consistent log/GUI display
-    // Use actual impact (what happens today)
-    stock.eventExpectedPrice = stock.price * (1 + actualImpact);
-    stock.eventExpectedDelta = actualImpact;
     
-    console.log(`[PIVOT] ${getDate()}: ${stock.symbol} ${pivotType.toUpperCase()} triggered [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] [daysLeft=${stock.pivotDaysLeft}]`);
+    // DD-002: Use standardized setPriceEvent() for atomic property updates
+    const event = setPriceEvent(stock, actualImpact, 'ANNOUNCEMENT_DAY', `[type=${pivotType}] [daysLeft=${stock.pivotDaysLeft}]`);
+    console.log(event.logString);
+    
+    stock.sentimentOffset = (stock.sentimentOffset || 0) - 0.03 * memeMultiplier;
     console.log(`  Catalyst: ${catalyst.headline}, Reversal: ${Math.round(reversalProb * 100)}% (will: ${stock.pivotWillReverse})`);
 
     return true;
@@ -571,7 +603,11 @@ const StrategicPivot = (function() {
     if (stock.pivotDayCounter > 1) {
       // Continued selling pressure on subsequent days
       const impact = CONSTANTS.PRICE_IMPACT.announcement[pivotType];
-      stock.crashTransitionEffect = (impact.min * 0.3 + random() * Math.abs(impact.min * 0.3)) * memeMultiplier;
+      const continuationImpact = (impact.min * 0.3 + random() * Math.abs(impact.min * 0.3)) * memeMultiplier;
+      // DD-002: Only set price event if meaningful move (>0.5%)
+      if (Math.abs(continuationImpact) > 0.005) {
+        setPriceEvent(stock, continuationImpact, 'ANNOUNCEMENT_CONTINUATION', `[day=${stock.pivotDayCounter}]`);
+      }
     }
 
     if (stock.pivotDaysLeft <= 0) {
@@ -591,21 +627,33 @@ const StrategicPivot = (function() {
   function processExecutionVoidPhase(stock, pivotType, memeMultiplier) {
     // The "Void" - no news, short covering / institutional absorption
     const impact = CONSTANTS.PRICE_IMPACT.executionVoid[pivotType];
+    let voidImpact;
     
     // Bounce dynamics based on type
     if (pivotType === CONSTANTS.PIVOT_TYPES.GOLD_STANDARD) {
       // Strong absorption
-      stock.crashTransitionEffect = 0.01 + random() * 0.03;
+      voidImpact = 0.01 + random() * 0.03;
+      // DD-002: Log gold standard absorption as it's a key signal
+      const event = setPriceEvent(stock, voidImpact, 'EXECUTION_VOID_ABSORPTION', `[type=gold_standard] [daysLeft=${stock.pivotDaysLeft}]`);
+      console.log(event.logString);
     } else if (pivotType === CONSTANTS.PIVOT_TYPES.SYMBOLIC) {
       // Moderate bounce from short covering
       if (stock.pivotDayCounter % 3 === 0) {
-        stock.crashTransitionEffect = 0.01 + random() * 0.02;
+        voidImpact = 0.01 + random() * 0.02;
       } else {
-        stock.crashTransitionEffect = impact.min + random() * (impact.max - impact.min);
+        voidImpact = impact.min + random() * (impact.max - impact.min);
+      }
+      // DD-002: Only set price event if meaningful move (>0.5%)
+      if (Math.abs(voidImpact) > 0.005) {
+        setPriceEvent(stock, voidImpact, 'EXECUTION_VOID_SYMBOLIC', `[day=${stock.pivotDayCounter}] [daysLeft=${stock.pivotDaysLeft}]`);
       }
     } else {
       // Reactive/Structural - minimal bounce
-      stock.crashTransitionEffect = impact.min + random() * (impact.max - impact.min);
+      voidImpact = impact.min + random() * (impact.max - impact.min);
+      // DD-002: Only set price event if meaningful move (>0.5%)
+      if (Math.abs(voidImpact) > 0.005) {
+        setPriceEvent(stock, voidImpact, 'EXECUTION_VOID_DRIFT', `[type=${pivotType}] [daysLeft=${stock.pivotDaysLeft}]`);
+      }
     }
 
     // Mid-void news
@@ -629,11 +677,22 @@ const StrategicPivot = (function() {
     
     if (stock.pivotWillReverse) {
       // Recovery
-      stock.crashTransitionEffect = (impact.max + random() * Math.abs(impact.max - impact.min)) / Math.max(1, stock.pivotDaysLeft);
+      const recoveryImpact = (impact.max + random() * Math.abs(impact.max - impact.min)) / Math.max(1, stock.pivotDaysLeft);
+      // DD-002: Log recovery phases as they are significant
+      if (Math.abs(recoveryImpact) > 0.005) {
+        const event = setPriceEvent(stock, recoveryImpact, 'RESOLUTION_RECOVERY', `[type=${pivotType}] [daysLeft=${stock.pivotDaysLeft}]`);
+        if (stock.pivotDaysLeft <= 3) {
+          console.log(event.logString);
+        }
+      }
       stock.sentimentOffset = (stock.sentimentOffset || 0) + 0.015 * memeMultiplier;
     } else {
       // Continued decline or new base
-      stock.crashTransitionEffect = impact.min + random() * (impact.max - impact.min) * 0.5;
+      const declineImpact = impact.min + random() * (impact.max - impact.min) * 0.5;
+      // DD-002: Only set price event if meaningful move (>0.5%)
+      if (Math.abs(declineImpact) > 0.005) {
+        setPriceEvent(stock, declineImpact, 'RESOLUTION_NEW_BASE', `[type=${pivotType}] [daysLeft=${stock.pivotDaysLeft}]`);
+      }
     }
 
     if (stock.pivotDaysLeft <= 0) {
@@ -808,16 +867,17 @@ const StrategicPivot = (function() {
     const phase = newsItem.pivotPhase;
     const signals = newsItem.pivotSignals || {};
     const reversalProb = newsItem.reversalProbability || 0.5;
+    const probPercent = Math.round(reversalProb * 100);
 
     const typeDescriptions = {
-      [CONSTANTS.PIVOT_TYPES.REACTIVE]: '🔴 REACTIVE PIVOT (Dying Firm)',
-      [CONSTANTS.PIVOT_TYPES.STRUCTURAL]: '🟠 STRUCTURAL PIVOT (Real Change)',
-      [CONSTANTS.PIVOT_TYPES.SYMBOLIC]: '🟡 SYMBOLIC PIVOT (Hype-Based)',
-      [CONSTANTS.PIVOT_TYPES.GOLD_STANDARD]: '🏆 GOLD STANDARD (All Signals Aligned)'
+      [CONSTANTS.PIVOT_TYPES.REACTIVE]: `🔴 REACTIVE PIVOT (Dying Firm) - ${probPercent}% probability`,
+      [CONSTANTS.PIVOT_TYPES.STRUCTURAL]: `🟠 STRUCTURAL PIVOT (Real Change) - ${probPercent}% probability`,
+      [CONSTANTS.PIVOT_TYPES.SYMBOLIC]: `🟡 SYMBOLIC PIVOT (Hype-Based) - ${probPercent}% probability`,
+      [CONSTANTS.PIVOT_TYPES.GOLD_STANDARD]: `🏆 GOLD STANDARD (All Signals Aligned) - ${probPercent}% probability`
     };
 
     const tutorial = {
-      type: typeDescriptions[pivotType] || '🟡 STRATEGIC PIVOT',
+      type: typeDescriptions[pivotType] || `🟡 STRATEGIC PIVOT - ${probPercent}% probability`,
       description: pivotType === CONSTANTS.PIVOT_TYPES.GOLD_STANDARD
         ? 'All 4 Gold Standard signals present - highest probability reversal.'
         : pivotType === CONSTANTS.PIVOT_TYPES.SYMBOLIC
@@ -825,12 +885,12 @@ const StrategicPivot = (function() {
           : pivotType === CONSTANTS.PIVOT_TYPES.REACTIVE
             ? 'Desperate pivot by dying firm - very low reversal probability.'
             : 'Real structural change with capital commitment - slow recovery if any.',
-      implication: `${Math.round(reversalProb * 100)}% reversal probability based on signals.`,
+      implication: `📊 ${probPercent}% reversal probability based on signals.`,
       action: pivotType === CONSTANTS.PIVOT_TYPES.GOLD_STANDARD
-        ? '📈 BUY after confirmation (Day 2-3). Target: full recovery in 10-14 days.'
+        ? `📈 BUY after confirmation (Day 2-3). ${probPercent}% success rate. Target: full recovery in 10-14 days.`
         : pivotType === CONSTANTS.PIVOT_TYPES.SYMBOLIC
-          ? '📈 Consider buying after Execution Void begins. 65% reversal in 2-3 weeks.'
-          : '⛔ DO NOT BUY - low probability setup.'
+          ? `📈 Consider buying after Execution Void begins. ${probPercent}% reversal in 2-3 weeks.`
+          : `⛔ DO NOT BUY - only ${probPercent}% probability setup.`
     };
 
     // Signal breakdown

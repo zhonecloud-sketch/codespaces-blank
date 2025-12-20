@@ -74,15 +74,31 @@ function updateStockPrices() {
     
     // DIRECT PRICE SHOCK on event transition days
     // Ensures news matches price action (e.g., "bounce begins" = price UP same day)
-    // Used by: dead cat bounce, manipulation, FOMO, short squeeze, insider, splits, etc.
+    // Used by: dead cat bounce, manipulation, FOMO, short squeeze, insider, splits, shakeout, etc.
     const crashTransition = stock.crashTransitionEffect || 0;
     const ssrTransition = stock.shortReportTransitionEffect || 0;
-    const transitionEffect = crashTransition + ssrTransition;
+    const shakeoutTransition = stock.shakeoutTransitionEffect || 0;
+    const transitionEffect = crashTransition + ssrTransition + shakeoutTransition;
     stock.crashTransitionEffect = 0; // Reset after use
     stock.shortReportTransitionEffect = 0; // Reset after use
+    stock.shakeoutTransitionEffect = 0; // Reset after use
     
     // Calculate new price
-    let newPrice = stock.price * (1 + trendEffect + correction + noise + transitionEffect);
+    // DESIGN DECISION DD-001: Pure transition effect on catalyst days
+    // When transition effect is active, suppress noise/trend/correction to ensure exact price match.
+    // Rationale: On major catalyst days (20% drops), daily noise (~0.5%) is negligible.
+    // This provides: (1) educational clarity - clear cause-effect, (2) module integrity - 
+    // expected price matches actual, (3) easier debugging via test_coupling.js.
+    // See plan.md for full decision record.
+    const hasTransition = transitionEffect !== 0;
+    let newPrice;
+    if (hasTransition) {
+      // Pure transition effect only - matches module's expected price exactly
+      newPrice = stock.price * (1 + transitionEffect);
+    } else {
+      // Normal day: apply all market forces
+      newPrice = stock.price * (1 + trendEffect + correction + noise);
+    }
     
     // Price sanity checks
     // Floor at 5% of base price (allows deep crashes) or $1 minimum (penny stock territory)
@@ -109,10 +125,13 @@ function updateStockPrices() {
     const newPriceHistory = [...(stock.priceHistory || []), newPrice];
     if (newPriceHistory.length > MAX_HISTORY_POINTS) newPriceHistory.shift();
     
+    // Round to 2 decimal places for stock price precision
+    const finalPrice = Math.round(newPrice * 100) / 100;
+    
     return { 
       ...stock, 
       previousPrice: stock.price, 
-      price: Math.round(newPrice), 
+      price: finalPrice, 
       history: newHistory,
       priceHistory: newPriceHistory,
       consecutiveUpDays: newConsecutiveUpDays,

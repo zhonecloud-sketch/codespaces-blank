@@ -155,6 +155,43 @@ const NewsShakeout = (function() {
     return '?';
   }
 
+  // ========== STANDARDIZED PRICE EVENT API (DD-002) ==========
+  /**
+   * CRITICAL: Call this function for EVERY phase that affects stock price.
+   * This ensures GUI/log/market consistency by setting all required properties.
+   * 
+   * @param {Object} stock - The stock object
+   * @param {number} priceChange - The percentage change (e.g., -0.15 for -15%)
+   * @param {string} phaseName - Name for logging (e.g., 'PANIC', 'STABILIZATION_DAY2')
+   * @param {Object} shakeout - The shakeout state object
+   * @param {Object} extraLogInfo - Additional info for log string
+   * @returns {Object} { expectedPrice, logString } for consistent logging
+   * 
+   * SETS ON STOCK:
+   * - shakeoutTransitionEffect: For market.js DD-001 pure transition
+   * - eventExpectedPrice: For GUI validation
+   * - eventExpectedDelta: For percentage validation
+   */
+  function setPriceEvent(stock, priceChange, phaseName, shakeout, extraLogInfo = '') {
+    // Calculate expected price with proper rounding (matches market.js)
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    
+    // Calculate actual delta after rounding (matches what render.js shows)
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set ALL required properties atomically
+    stock.shakeoutTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;  // Use actual delta after rounding
+    
+    // Generate standardized log string with ACTUAL delta (matches GUI)
+    const deltaStr = (actualDelta * 100).toFixed(1);
+    const logString = `[SHAKEOUT] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${deltaStr}%] ${extraLogInfo} [day=${shakeout.day}/${shakeout.totalDays}]`;
+    
+    return { expectedPrice, priceChange: actualDelta, logString };
+  }
+
+  // Legacy helper - DEPRECATED, use setPriceEvent instead
   function getPriceInfo(stock, prePanic = null) {
     const price = stock.price ? `$${stock.price.toFixed(2)}` : '$?';
     const ref = prePanic || stock.prePanicPrice;
@@ -418,13 +455,13 @@ const NewsShakeout = (function() {
     // Day 1 - the panic drop
     result.priceChange = shakeout.panicDrop;
     
-    // Record panic metrics
-    shakeout.panicPrice = stock.price * (1 + shakeout.panicDrop);
-    shakeout.day1Low = shakeout.panicPrice;
+    // DD-002: Use standardized API for ALL price events
+    const event = setPriceEvent(stock, shakeout.panicDrop, 'PANIC', shakeout, 
+      `${shakeout.newsType}, RSI=${shakeout.rsiAtPanic?.toFixed(0) || '?'}, vol=${shakeout.panicVolume.toFixed(1)}x [totalDays=${shakeout.totalDays}]`);
     
-    // Store expected outcome for consistent log/GUI display
-    stock.eventExpectedPrice = shakeout.panicPrice;
-    stock.eventExpectedDelta = shakeout.panicDrop;
+    // Record panic metrics
+    shakeout.panicPrice = event.expectedPrice;
+    shakeout.day1Low = shakeout.panicPrice;
     
     // Calculate RSI after panic
     const mockPriceHistory = generateMockPriceHistory(stock.price, 20, shakeout.panicDrop);
@@ -452,6 +489,11 @@ const NewsShakeout = (function() {
       type: 'news_shakeout',
       relatedStock: stock.symbol,
       phase: 'panic',
+      triggerNews: shakeout.newsType,  // For tutorial hint display
+      newsType: shakeout.newsType,     // For consistency
+      goldStandardCount: shakeout.goldStandardCount,
+      goldStandardCriteria: shakeout.goldStandardCriteria,
+      isTransient: shakeout.isTransient,
       headline: panicHeadline,
       body: `Stock crashes on ${shakeout.panicVolume.toFixed(1)}x normal volume. ` +
             `RSI drops to ${shakeout.rsiAtPanic.toFixed(0)}. Is this a shakeout or the start of something worse?`,
@@ -465,6 +507,7 @@ const NewsShakeout = (function() {
         'This headline uses: ' + (shakeout.isTransient ? 'SOFT INFO → 85% reversal in 5-10 days!' : 'Potential HARD INFO → Wait for confirmation!')
     };
     
+    // DD-002: Re-generate log after RSI is calculated
     console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} PANIC [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] ${shakeout.newsType}, RSI=${shakeout.rsiAtPanic.toFixed(0)}, vol=${shakeout.panicVolume.toFixed(1)}x [totalDays=${shakeout.totalDays}]`);
 
     // Transition to stabilization
@@ -500,10 +543,25 @@ const NewsShakeout = (function() {
 
     // Day 2 news
     if (dayInPhase === 1) {
+      // DD-002: Use standardized API for ALL price events
+      const event = setPriceEvent(stock, dailyChange, 'STABILIZATION_DAY2', shakeout, 'volatile');
+      
+      // Build criteria status string for tutorial hint
+      const criteria = shakeout.goldStandardCriteria;
+      const criteriaStatus = `Transient news: ${criteria.transientNews ? '✓' : '✗'}, ` +
+                            `Volume climax: ${criteria.volumeClimax ? '✓' : '✗'}, ` +
+                            `RSI oversold: ${criteria.rsiOversold ? '✓' : '✗'}, ` +
+                            `Stabilization: ${criteria.stabilization ? '✓' : 'pending'}`;
+      
       result.news = {
         type: 'news_shakeout',
-      relatedStock: stock.symbol,
+        relatedStock: stock.symbol,
         phase: 'stabilization',
+        triggerNews: shakeout.newsType,
+        newsType: shakeout.newsType,
+        goldStandardCount: shakeout.goldStandardCount,
+        goldStandardCriteria: shakeout.goldStandardCriteria,  // Pass object, not string
+        isTransient: shakeout.isTransient,
         headline: `${stock.symbol} volatile as traders assess damage`,
         body: `Day 2: Stock stabilizing after yesterday's panic. Watching for continuation or reversal.`,
         sentiment: -0.3,
@@ -513,7 +571,7 @@ const NewsShakeout = (function() {
           'If stock RISES on a Sell rating = 85% reversal CONFIRMED!'
       };
       
-      console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} STABILIZATION_DAY2 ${getPriceInfo(stock, shakeout.prePanicPrice)} volatile [day=${shakeout.day}/${shakeout.totalDays}]`);
+      console.log(event.logString);
     }
 
     // Check stabilization criteria on Day 3
@@ -548,10 +606,19 @@ const NewsShakeout = (function() {
           shakeout.willSucceed = Math.random() < shakeout.currentProbability;
         }
         
+        // DD-002: Use standardized API for ALL price events
+        const event = setPriceEvent(stock, dailyChange, 'STABILIZATION_DAY3', shakeout, 
+          `${shakeout.goldStandardCount}/4 GoldStd`);
+        
         result.news = {
           type: 'news_shakeout',
-      relatedStock: stock.symbol,
+          relatedStock: stock.symbol,
           phase: 'stabilization',
+          triggerNews: shakeout.newsType,
+          newsType: shakeout.newsType,
+          goldStandardCount: shakeout.goldStandardCount,
+          goldStandardCriteria: shakeout.goldStandardCriteria,
+          isTransient: shakeout.isTransient,
           headline: `${stock.symbol} shows signs of stabilization`,
           body: `Day 3: Stock closes higher than Day 2 and holds above panic low. ` +
                 `${shakeout.goldStandardCount}/4 Gold Standard criteria met. ` +
@@ -562,7 +629,7 @@ const NewsShakeout = (function() {
             `📊 ${shakeout.goldStandardCount}/4 criteria - ${(shakeout.currentProbability * 100).toFixed(0)}% probability`
         };
         
-        console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} STABILIZATION_DAY3 ${getPriceInfo(stock, shakeout.prePanicPrice)} ${shakeout.goldStandardCount}/4 GoldStd [day=${shakeout.day}/${shakeout.totalDays}]`);
+        console.log(event.logString);
         
         // INSTITUTIONAL MANIPULATION TRAP DETECTION (Analyst Herd Behavior)
         // Empirical: Late downgrades AFTER 20%+ drop = liquidity hunt, NOT bearish signal
@@ -581,35 +648,54 @@ const NewsShakeout = (function() {
       shakeout.entryPrice = newPrice;
       shakeout.entryDay = shakeout.day;
       
+      // NOTE: Transition effect already set above before news generation
+      
       // Log if stabilization was NOT confirmed on Day 3 - also generate news
       if (!shakeout.goldStandardCriteria.stabilization && dayInPhase === 2) {
+        // DD-002: Use standardized API for ALL price events
+        const weakEvent = setPriceEvent(stock, dailyChange, 'STABILIZATION_DAY3', shakeout, 'WEAK (no confirm)');
+        
         result.news = {
           type: 'news_shakeout',
           relatedStock: stock.symbol,
           phase: 'stabilization',
+          triggerNews: shakeout.newsType,
+          newsType: shakeout.newsType,
+          goldStandardCount: shakeout.goldStandardCount,
+          goldStandardCriteria: shakeout.goldStandardCriteria,
+          isTransient: shakeout.isTransient,
           headline: `${stock.symbol} enters entry phase without confirmation`,
           body: `Day 3: Pattern not fully confirmed but timeline progressing. Higher risk trade.`,
           sentiment: -0.2,
           telltale: '⚠️ WEAK ENTRY: Pattern criteria not met - proceed with caution, use stops'
         };
-        console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} STABILIZATION_DAY3 ${getPriceInfo(stock, shakeout.prePanicPrice)} WEAK (no confirm) [day=${shakeout.day}/${shakeout.totalDays}]`);
+        console.log(weakEvent.logString);
       }
     }
     
     // Failed stabilization - transition anyway but mark as failed
     if (dayInPhase >= shakeout.stabilizationDays + 2 && !shakeout.goldStandardCriteria.stabilization) {
       shakeout.phase = 'entry';
+      
+      // DD-002: Use standardized API - use dailyChange calculated earlier
+      const failEvent = setPriceEvent(stock, dailyChange, 'FAILED_STABILIZATION', shakeout, 'value trap');
+      
       result.news = {
         type: 'news_shakeout',
-      relatedStock: stock.symbol,
+        relatedStock: stock.symbol,
         phase: 'stabilization',
+        triggerNews: shakeout.newsType,
+        newsType: shakeout.newsType,
+        goldStandardCount: shakeout.goldStandardCount,
+        goldStandardCriteria: shakeout.goldStandardCriteria,
+        isTransient: shakeout.isTransient,
         headline: `${stock.symbol} fails to stabilize - caution warranted`,
         body: `Stock making new lows, stabilization pattern NOT confirmed. High risk of value trap.`,
         sentiment: -0.5,
         telltale: '⚠️ FAILED STABILIZATION: Price keeps falling - this may be terminal'
       };
       
-      console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} FAILED_STABILIZATION ${getPriceInfo(stock, shakeout.prePanicPrice)} value trap [day=${shakeout.day}/${shakeout.totalDays}]`);
+      console.log(failEvent.logString);
     }
   }
 
@@ -624,10 +710,19 @@ const NewsShakeout = (function() {
     const entryBounce = 0.01 + Math.random() * 0.02;
     result.priceChange = entryBounce;
     
+    // DD-002: Use standardized API for ALL price events
+    const event = setPriceEvent(stock, entryBounce, 'ENTRY', shakeout, 
+      `target=$${shakeout.gapFillTarget.toFixed(2)}`);
+    
     result.news = {
       type: 'news_shakeout',
       relatedStock: stock.symbol,
       phase: 'entry',
+      triggerNews: shakeout.newsType,
+      newsType: shakeout.newsType,
+      goldStandardCount: shakeout.goldStandardCount,
+      goldStandardCriteria: shakeout.goldStandardCriteria,
+      isTransient: shakeout.isTransient,
       headline: `${stock.symbol} confirms reversal pattern`,
       body: `Entry signal triggered. Target: Gap fill to $${shakeout.gapFillTarget.toFixed(2)} (+${(shakeout.gapFillGain * 100).toFixed(0)}%)`,
       sentiment: 0.5,
@@ -636,7 +731,7 @@ const NewsShakeout = (function() {
         '⚠️ ENTRY: Pattern triggered but may fail - use stops'
     };
     
-    console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} ENTRY ${getPriceInfo(stock, shakeout.prePanicPrice)} target=$${shakeout.gapFillTarget.toFixed(2)} [day=${shakeout.day}/${shakeout.totalDays}]`);
+    console.log(event.logString);
   }
 
   /**
@@ -655,6 +750,10 @@ const NewsShakeout = (function() {
         
         result.priceChange = dailyGain;
         
+        // DD-002: ALWAYS set transition effect for recovery days (even without news)
+        // This ensures price changes are applied via DD-001 pure transition
+        const event = setPriceEvent(stock, dailyGain, 'RECOVERY', shakeout, 'V-bottom');
+        
         // Update RSI
         shakeout.currentRSI = Math.min(70, shakeout.currentRSI + 3 + Math.random() * 5);
         
@@ -664,32 +763,45 @@ const NewsShakeout = (function() {
         
         // Milestone news
         if (gapFillProgress >= 0.5 && dayInPhase === Math.floor(shakeout.recoveryDays / 2)) {
+          // DD-002: Log milestone using actual delta (matches GUI)
+          console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} RECOVERY_50% [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] [day=${shakeout.day}/${shakeout.totalDays}]`);
+          
           result.news = {
             type: 'news_shakeout',
-      relatedStock: stock.symbol,
+            relatedStock: stock.symbol,
             phase: 'recovery',
+            triggerNews: shakeout.newsType,
+            newsType: shakeout.newsType,
+            goldStandardCount: shakeout.goldStandardCount,
+            goldStandardCriteria: shakeout.goldStandardCriteria,
+            isTransient: shakeout.isTransient,
             headline: `${stock.symbol} recovery gaining momentum - 50% gap fill`,
             body: `V-bottom playing out. Stock has recovered half the panic drop. RSI now ${shakeout.currentRSI.toFixed(0)}.`,
             sentiment: 0.6,
             telltale: '📈 HOLD: Gap fill on track - De Bondt & Thaler overreaction reversal confirmed'
           };
-          
-          console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} RECOVERY_50% ${getPriceInfo(stock, shakeout.prePanicPrice)} [day=${shakeout.day}/${shakeout.totalDays}]`);
         }
         
         // Gap fill complete
         if (projectedPrice >= shakeout.gapFillTarget * 0.98) {
+          // DD-002: Log gap fill using actual delta (matches GUI)
+          console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} GAP_FILL [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] ${Math.round(gapFillProgress * 100)}% recovered [day=${shakeout.day}]`);
+          
           result.news = {
             type: 'news_shakeout',
-      relatedStock: stock.symbol,
+            relatedStock: stock.symbol,
             phase: 'recovery',
+            triggerNews: shakeout.newsType,
+            newsType: shakeout.newsType,
+            goldStandardCount: shakeout.goldStandardCount,
+            goldStandardCriteria: shakeout.goldStandardCriteria,
+            isTransient: shakeout.isTransient,
             headline: `${stock.symbol} completes GAP FILL - overreaction fully reversed`,
             body: `Stock returns to pre-panic level. Classic News Shakeout pattern complete. Tetlock (2007): Reversal within ${shakeout.day} days.`,
             sentiment: 0.8,
             telltale: '🎯 TARGET HIT: Gap filled - take profits or trail stop'
           };
           
-          console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} GAP_FILL ${getPriceInfo(stock, shakeout.prePanicPrice)} ${Math.round(gapFillProgress * 100)}% recovered [day=${shakeout.day}]`);
           shakeout.phase = 'complete';
         }
       } else {
@@ -697,19 +809,27 @@ const NewsShakeout = (function() {
         const failedChange = -0.02 + Math.random() * 0.03; // Mostly down, some chop
         result.priceChange = failedChange;
         
+        // DD-002: Use standardized API for ALL price events
+        const failEvent = setPriceEvent(stock, failedChange, 'RECOVERY_STALLS', shakeout, 'value trap');
+        
         // First day of failed recovery
         if (dayInPhase === 1) {
           result.news = {
             type: 'news_shakeout',
-      relatedStock: stock.symbol,
-            phase: 'recovery',
+            relatedStock: stock.symbol,
+            phase: 'value_trap',  // Use distinct phase for proper hint
+            triggerNews: shakeout.newsType,
+            newsType: shakeout.newsType,
+            goldStandardCount: shakeout.goldStandardCount,
+            goldStandardCriteria: shakeout.goldStandardCriteria,
+            isTransient: shakeout.isTransient,
             headline: `${stock.symbol} recovery stalls - value trap risk`,
             body: `Bounce failing to gain traction. News may be more terminal than initially thought.`,
             sentiment: -0.4,
             telltale: '⚠️ VALUE TRAP: Recovery failing - not a true shakeout'
           };
           
-          console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} RECOVERY_STALLS ${getPriceInfo(stock, shakeout.prePanicPrice)} value trap [day=${shakeout.day}/${shakeout.totalDays}]`);
+          console.log(failEvent.logString);
         }
       }
     }
@@ -721,10 +841,19 @@ const NewsShakeout = (function() {
       const totalGain = (stock.price - shakeout.panicPrice) / shakeout.panicPrice;
       const gapFillPercent = (stock.price - shakeout.panicPrice) / (shakeout.gapFillTarget - shakeout.panicPrice);
       
+      // DD-002: COMPLETE is a summary event - NO price impact, NO transition effect
+      // Don't set eventExpectedPrice/Delta so GUI/log validation is skipped
+      // (Stock will continue trading normally after event completes)
+      
       result.news = {
         type: 'news_shakeout',
-      relatedStock: stock.symbol,
+        relatedStock: stock.symbol,
         phase: 'complete',
+        triggerNews: shakeout.newsType,
+        newsType: shakeout.newsType,
+        goldStandardCount: shakeout.goldStandardCount,
+        goldStandardCriteria: shakeout.goldStandardCriteria,
+        isTransient: shakeout.isTransient,
         headline: `${stock.symbol} news shakeout event complete`,
         body: shakeout.willSucceed ?
           `Successful reversal: +${(totalGain * 100).toFixed(1)}% from panic low. ${(gapFillPercent * 100).toFixed(0)}% gap fill achieved.` :
@@ -735,7 +864,8 @@ const NewsShakeout = (function() {
           '❌ COMPLETE: Value trap - news was terminal, not transient'
       };
       
-      console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} COMPLETE ${getPriceInfo(stock, shakeout.prePanicPrice)} ${shakeout.willSucceed ? 'SUCCESS' : 'FAILED'} ${(gapFillPercent * 100).toFixed(0)}% gap [END]`);
+      // Log completion (no price impact, just summary)
+      console.log(`[SHAKEOUT] ${getDate()}: ${stock.symbol} COMPLETE [$${stock.price.toFixed(2)}] ${shakeout.willSucceed ? 'SUCCESS' : 'FAILED'} ${(gapFillPercent * 100).toFixed(0)}% gap [END]`);
     }
   }
 
@@ -747,13 +877,14 @@ const NewsShakeout = (function() {
   function formatNewsType(newsType) {
     const formats = {
       // SOFT INFORMATION - Subjective, reverses (Tetlock 2007: "Sentiment Ghost")
-      'litigation_rumor': 'litigation RUMORS',        // Soft: "Rumors" = no new fact
-      'ceo_departure': 'CEO departure CONCERNS',      // Soft: "Concerns" = fear
-      'metric_miss': 'metric MISS',                   // Soft: Miss is relative
-      'macro_scare': 'macro FEARS',                   // Soft: "Fears" = emotion
-      'sector_rotation': 'sector rotation WORRIES',   // Soft: "Worries" = uncertainty
-      'analyst_downgrade': 'analyst DOWNGRADE',       // Soft: Opinion, not fact
-      'guidance_miss': 'guidance UNCERTAINTY',        // Soft: "Uncertainty" = speculation
+      // Note: Soft words (FEARS, CONCERNS, etc.) are added by headline templates
+      'litigation_rumor': 'litigation rumors',
+      'ceo_departure': 'CEO departure',
+      'metric_miss': 'metric miss',
+      'macro_scare': 'macro',
+      'sector_rotation': 'sector rotation',
+      'analyst_downgrade': 'analyst downgrade',
+      'guidance_miss': 'guidance',
       
       // HARD INFORMATION - Objective, continues (Loughran & McDonald 2011)
       'fraud': 'FRAUD ALLEGATIONS - SEC Investigation',      // Hard: Legal action
@@ -954,12 +1085,37 @@ const NewsShakeout = (function() {
     const goldCount = newsItem.goldStandardCount || 0;
     const isTransient = newsItem.isTransient !== false;
     const newsType = newsItem.triggerNews || 'unknown';
+    const criteriaStatus = newsItem.goldStandardCriteria || null;
+    
+    // Calculate probability based on Gold Standard count
+    const probabilityByGold = {
+      0: 30,
+      1: 45,
+      2: 55,
+      3: 70,
+      4: 85
+    };
+    const probability = probabilityByGold[goldCount] || 30;
+
+    // Build accurate criteria display from actual status or estimate from count
+    const criteria = criteriaStatus || {};
+    const hasTransient = criteria.transientNews !== undefined ? criteria.transientNews : isTransient;
+    const hasVolume = criteria.volumeClimax !== undefined ? criteria.volumeClimax : goldCount >= 2;
+    const hasRSI = criteria.rsiOversold !== undefined ? criteria.rsiOversold : goldCount >= 3;
+    const hasStabilization = criteria.stabilization !== undefined ? criteria.stabilization : goldCount >= 4;
+    
+    // Build criteria display string
+    const criteriaDisplay = `Gold Standard (${goldCount}/4): ` +
+      `Transient news ${hasTransient ? '✓' : '✗'}, ` +
+      `Volume climax ${hasVolume ? '✓' : '✗'}, ` +
+      `RSI oversold ${hasRSI ? '✓' : '✗'}, ` +
+      `Stabilization ${hasStabilization ? '✓' : '✗'}`;
 
     const hints = {
       panic: {
         type: 'News Shakeout PANIC - Do Not Buy Yet',
         description: `News-driven panic drop (${newsType}). Forced sellers (margin calls, funds) dumping shares.`,
-        implication: 'Panic selling NOT finished. More downside possible in next 24-48 hours.',
+        implication: `⚠️ ${probability}% reversal probability (${goldCount}/4 Gold Standard). Panic selling NOT finished.`,
         action: 'DO NOT BUY. Wait for 3-day stabilization pattern before entry.',
         timing: 'ENTRY: NOT YET. Wait for Day 3 close > Day 2. EXIT: N/A.',
         catalyst: isTransient ? 
@@ -969,30 +1125,30 @@ const NewsShakeout = (function() {
       stabilization: {
         type: `News Shakeout STABILIZATION - ${goldCount}/4 Gold Standard`,
         description: 'Forced selling clearing out. Watching for 3-day stabilization pattern.',
-        implication: goldCount >= 2 ? 
-          `Stabilization in progress. ${goldCount}/4 criteria met. Wait for Day 3 confirmation.` :
-          'Too early to confirm stabilization. Need more criteria.',
+        implication: `📊 ${probability}% reversal probability. ${criteriaDisplay}`,
         action: 'WATCH - Key test: Does Day 3 close ABOVE Day 2? Price must hold above panic low.',
         timing: 'ENTRY: Wait for Day 3+ confirmation. EXIT: N/A.',
         catalyst: `De Bondt & Thaler (1985): Extreme losers outperform. Waiting for selling exhaustion to confirm.`
       },
       entry: {
         type: `News Shakeout ENTRY SIGNAL - ${goldCount}/4 Gold Standard`,
-        description: '3-day stabilization CONFIRMED. RSI oversold. Mean reversion beginning.',
+        description: hasStabilization ? 
+          '3-day stabilization pattern CONFIRMED. RSI oversold. Mean reversion opportunity.' :
+          '3-day period elapsed but stabilization NOT confirmed. Higher risk entry.',
         implication: goldCount >= 4 ? 
-          '85%+ reversal probability (Gold Standard). De Bondt & Thaler pattern confirmed.' : 
-          `${goldCount}/4 criteria met. ~${50 + goldCount * 10}% probability.`,
-        action: goldCount >= 3 ? 
-          'BUY NOW - Stabilization confirmed. Classic overreaction reversal.' : 
-          'CONSIDER BUY - Some criteria missing, lower probability.',
+          '🏆 85% reversal probability (Gold Standard). De Bondt & Thaler pattern confirmed.' : 
+          `📊 ${probability}% reversal probability (${goldCount}/4 criteria met).`,
+        action: hasStabilization ? 
+          `BUY NOW - ${probability}% success rate. Day 3 closed above Day 2.` : 
+          `CONSIDER BUY - ${probability}% success rate. Stabilization NOT confirmed, use smaller position.`,
         timing: 'ENTRY: On first green day after stabilization. EXIT: +8% to +15% gap fill target.',
-        catalyst: `Gold Standard (${goldCount}/4): Transient news ${goldCount >= 1 ? '✓' : '?'}, Volume climax ${goldCount >= 2 ? '✓' : '?'}, Stabilization ${goldCount >= 3 ? '✓' : '?'}, RSI < 25 ${goldCount >= 4 ? '✓' : '?'}`
+        catalyst: criteriaDisplay
       },
       recovery: {
-        type: 'News Shakeout RECOVERY - Gap Fill in Progress',
+        type: `News Shakeout RECOVERY - ${probability}% Success Setup`,
         description: 'Mean reversion playing out. Price recovering toward pre-panic level.',
-        implication: 'De Bondt & Thaler: Extreme losers outperform within 30-90 days.',
-        action: 'HOLD - Trail stop at breakeven. Target gap fill (pre-panic price).',
+        implication: `📈 ${criteriaDisplay}. De Bondt & Thaler: Extreme losers outperform within 30-90 days.`,
+        action: 'HOLD if owned. If not: Late entry OK if still below gap fill target.',
         timing: 'ENTRY: Late but ok if still below gap fill. EXIT: At gap fill target.',
         catalyst: 'Tetlock (2007): High media negativity predicts reversion to fundamentals within 5-10 days.'
       },
@@ -1000,16 +1156,16 @@ const NewsShakeout = (function() {
         type: 'News Shakeout COMPLETE',
         description: 'Overreaction recovery finished. Gap filled or pattern concluded.',
         implication: newsItem.sentiment > 0 ? 
-          'Successful reversal - typical +8% to +15% gain from panic low.' : 
-          'Value trap - terminal news prevented recovery.',
+          `✅ Successful reversal - ${goldCount}/4 setup delivered typical +8% to +15% gain.` : 
+          '❌ Value trap - terminal news prevented recovery.',
         action: 'TAKE PROFITS if holding. Trade complete.',
         timing: 'ENTRY: N/A. EXIT: Sell remaining position.',
-        catalyst: 'Key lesson: Transient news reverses (85%). Terminal news (fraud, bankruptcy) = value trap.'
+        catalyst: 'Key lesson: Transient news reverses (85% with Gold Standard). Terminal news (fraud, bankruptcy) = value trap.'
       },
       failed: {
         type: 'News Shakeout FAILED - Value Trap',
         description: 'Recovery did NOT materialize. This was NOT overreaction - news was structural.',
-        implication: 'Terminal news confirmed. Price likely continues lower. Cut losses.',
+        implication: '❌ <30% probability setup failed. Terminal news confirmed. Price likely continues lower.',
         action: 'EXIT if holding. This is a VALUE TRAP, not a shakeout.',
         timing: 'ENTRY: DO NOT BUY. EXIT: Stop out at panic low if still holding.',
         catalyst: 'Lesson: Distinguish "News Shakeout" (transient) from "Value Trap" (terminal). Gold Standard filter helps.'
@@ -1017,7 +1173,7 @@ const NewsShakeout = (function() {
       value_trap: {
         type: 'News Shakeout FAILED - Value Trap',
         description: 'Recovery did NOT materialize. This was NOT overreaction - news was structural.',
-        implication: 'Terminal news confirmed. Price likely continues lower. Cut losses.',
+        implication: '❌ <30% probability setup failed. Terminal news confirmed. Price likely continues lower.',
         action: 'EXIT if holding. This is a VALUE TRAP, not a shakeout.',
         timing: 'ENTRY: DO NOT BUY. EXIT: Stop out at panic low if still holding.',
         catalyst: 'Lesson: Distinguish "News Shakeout" (transient) from "Value Trap" (terminal). Gold Standard filter helps.'

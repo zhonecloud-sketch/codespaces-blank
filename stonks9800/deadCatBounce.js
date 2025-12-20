@@ -200,6 +200,41 @@ const DCB = (function() {
       : '?';
     return `[${price} Δ${delta.startsWith('-') ? '' : '+'}${delta}]`;
   }
+
+  // ========== DD-002: STANDARDIZED PRICE EVENT API ==========
+  /**
+   * CRITICAL: Call this function for EVERY phase that affects stock price.
+   * This ensures GUI/log/market consistency by setting all required properties.
+   * 
+   * @param {Object} stock - The stock object
+   * @param {number} priceChange - The percentage change (e.g., -0.15 for -15%)
+   * @param {string} phaseName - Name for logging (e.g., 'CRASH', 'BOUNCE')
+   * @param {string} extraLogInfo - Additional info for log string
+   * @returns {Object} { expectedPrice, logString } for consistent logging
+   * 
+   * SETS ON STOCK:
+   * - crashTransitionEffect: For market.js DD-001 pure transition
+   * - eventExpectedPrice: For GUI validation
+   * - eventExpectedDelta: For percentage validation
+   */
+  function setPriceEvent(stock, priceChange, phaseName, extraLogInfo = '') {
+    // Calculate expected price with proper rounding (matches market.js)
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    
+    // Calculate actual delta after rounding (matches what render.js shows)
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set ALL required properties atomically
+    stock.crashTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;  // Use actual delta after rounding
+    
+    // Generate standardized log string with ACTUAL delta (matches GUI)
+    const deltaStr = (actualDelta * 100).toFixed(1);
+    const logString = `[DCB] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${deltaStr}%] ${extraLogInfo}`;
+    
+    return { expectedPrice, priceChange: actualDelta, logString };
+  }
   
   // Calculate Fibonacci retracement percentage
   function calculateRetracement(stock) {
@@ -326,14 +361,10 @@ const DCB = (function() {
     const immediateImpact = -(crashMagnitude * 0.5 + random() * crashMagnitude * 0.2);
     stock.sentimentOffset = -severity * memeMultiplier;
     stock.volatilityBoost = (stock.volatilityBoost || 0) + 0.5 * memeMultiplier;
-    stock.crashTransitionEffect = immediateImpact;
     
-    // Store expected outcome for consistent log/GUI display
-    // Use immediate impact (what happens today), not eventual target
-    stock.eventExpectedPrice = stock.price * (1 + immediateImpact);
-    stock.eventExpectedDelta = immediateImpact;
-    
-    console.log(`[DCB] ${getDate()}: ${stock.symbol} CRASH TRIGGERED [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] [daysLeft=${stock.crashDaysLeft}]`);
+    // DD-002: Use standardized API for price event
+    const event = setPriceEvent(stock, immediateImpact, 'CRASH_TRIGGERED', `[daysLeft=${stock.crashDaysLeft}]`);
+    console.log(event.logString);
     
     return true;
   }
@@ -383,7 +414,8 @@ const DCB = (function() {
       
       // Apply pending transition effects
       if (stock.pendingTransitionEffect) {
-        stock.crashTransitionEffect = stock.pendingTransitionEffect;
+        const event = setPriceEvent(stock, stock.pendingTransitionEffect, 'PENDING_APPLIED');
+        console.log(event.logString);
         stock.pendingTransitionEffect = 0;
       }
       
@@ -439,10 +471,10 @@ const DCB = (function() {
       
       // Apply positive transition immediately (news says bounce starting, price should go up)
       const bounceStrength = 0.04 + random() * 0.04;
-      stock.crashTransitionEffect = bounceStrength;
+      const event = setPriceEvent(stock, bounceStrength, 'BOUNCE_START', `(volume: ${stock.volumeTrend}) [daysLeft=${stock.crashDaysLeft}]`);
       stock.sentimentOffset = bounceStrength * memeMultiplier;
       
-      console.log(`[DCB] ${getDate()}: ${stock.symbol} → BOUNCE phase ${getPriceInfo(stock)} (volume: ${stock.volumeTrend}) [daysLeft=${stock.crashDaysLeft}]`);
+      console.log(event.logString);
       generateBounceStartNews(stock);
     } else {
       // Continue crash
@@ -489,12 +521,12 @@ const DCB = (function() {
         
         const dropIndex = Math.min(stock.bounceNumber - 1, 2);
         stock.pendingDeclineMagnitude = CONSTANTS.DCB_TRAP.subsequentDrops[dropIndex];
-        stock.pendingTransitionEffect = -(0.04 + random() * 0.04);
+        const failedDrop = -(0.04 + random() * 0.04);
         // Reset sentiment to negative on bounce failure day - news says "FAILS"
         stock.sentimentOffset = -(0.03 + random() * 0.03) * memeMultiplier;
-        stock.crashTransitionEffect = stock.pendingTransitionEffect;
+        const event = setPriceEvent(stock, failedDrop, 'BOUNCE_FAILED', `(${Math.round(probability*100)}% not enough) [daysLeft=${stock.crashDaysLeft}]`);
         
-        console.log(`[DCB] ${getDate()}: ${stock.symbol} BOUNCE FAILED ${getPriceInfo(stock)} (${Math.round(probability*100)}% not enough) [daysLeft=${stock.crashDaysLeft}]`);
+        console.log(event.logString);
         generateBounceFailedNews(stock, currentRetracement);
       } else {
         // GENUINE REVERSAL: Transition to consolidation
@@ -505,10 +537,10 @@ const DCB = (function() {
         
         stock.volumeTrend = 'steady';
         // Apply small positive transition immediately
-        stock.crashTransitionEffect = 0.01;
+        const event = setPriceEvent(stock, 0.01, 'REVERSAL_CONFIRMED', `(${Math.round(probability*100)}% probability) [daysLeft=${stock.crashDaysLeft}]`);
         stock.sentimentOffset = 0.01 * memeMultiplier;
         
-        console.log(`[DCB] ${getDate()}: ${stock.symbol} REVERSAL! ${getPriceInfo(stock)} (${Math.round(probability*100)}% probability) [daysLeft=${stock.crashDaysLeft}]`);
+        console.log(event.logString);
         generateConsolidationNews(stock, currentRetracement);
       }
     } else {
@@ -555,16 +587,16 @@ const DCB = (function() {
         
         // Apply positive transition immediately (news says bounce starting)
         const bounceStrength = 0.02 + random() * 0.03;
-        stock.crashTransitionEffect = bounceStrength;
+        const event = setPriceEvent(stock, bounceStrength, `BOUNCE_#${stock.bounceNumber}`, `(weaker) [daysLeft=${stock.crashDaysLeft}]`);
         stock.sentimentOffset = bounceStrength * memeMultiplier;
         
-        console.log(`[DCB] ${getDate()}: ${stock.symbol} BOUNCE #${stock.bounceNumber} ${getPriceInfo(stock)} (weaker) [daysLeft=${stock.crashDaysLeft}]`);
+        console.log(event.logString);
         generateAnotherBounceNews(stock);
       } else {
         // Final capitulation - crash cycle ends
-        console.log(`[DCB] ${getDate()}: ${stock.symbol} CAPITULATION ${getPriceInfo(stock)} after ${stock.bounceNumber} bounces [END]`);
-        // Set negative transition effect BEFORE clearing state (news says decline confirmed)
-        stock.crashTransitionEffect = -(0.08 + random() * 0.06) * memeMultiplier;
+        const capDrop = -(0.08 + random() * 0.06) * memeMultiplier;
+        const event = setPriceEvent(stock, capDrop, 'CAPITULATION', `after ${stock.bounceNumber} bounces [END]`);
+        console.log(event.logString);
         generateCapitulationNews(stock);
         clearCrashState(stock);
       }
@@ -599,10 +631,10 @@ const DCB = (function() {
       
       // Apply transition effect immediately (news says SURGES today, price should surge today)
       const transitionStrength = 0.04 + random() * 0.04;
-      stock.crashTransitionEffect = transitionStrength;
+      const event = setPriceEvent(stock, transitionStrength, 'BREAKOUT', `→ recovery phase [daysLeft=${stock.crashDaysLeft}]`);
       stock.sentimentOffset = transitionStrength * memeMultiplier;
       
-      console.log(`[DCB] ${getDate()}: ${stock.symbol} BREAKOUT ${getPriceInfo(stock)} → recovery phase [daysLeft=${stock.crashDaysLeft}]`);
+      console.log(event.logString);
       generateBreakoutNews(stock);
     } else {
       // Sideways consolidation with slight positive bias (building base)
@@ -619,16 +651,23 @@ const DCB = (function() {
   // ===== RECOVERY PHASE PROCESSING =====
   function processRecoveryPhaseInternal(stock, memeMultiplier) {
     if (stock.crashDaysLeft <= 0) {
-      console.log(`[DCB] ${getDate()}: ${stock.symbol} RECOVERY COMPLETE ${getPriceInfo(stock)} [END]`);
       // Set positive transition effect BEFORE clearing state (news says recovery)
-      stock.crashTransitionEffect = (0.03 + random() * 0.03) * memeMultiplier;
+      const recGain = (0.03 + random() * 0.03) * memeMultiplier;
+      const event = setPriceEvent(stock, recGain, 'RECOVERY_COMPLETE', '[END]');
+      console.log(event.logString);
       generateRecoveryCompleteNews(stock);
       clearCrashState(stock);
     } else {
       const remainingGain = Math.max(0, (stock.recoveryTarget - stock.price) / stock.price);
       const dailyGain = remainingGain / (stock.crashDaysLeft + 3);
       
-      stock.crashTransitionEffect = dailyGain * (0.7 + random() * 0.5) * memeMultiplier;
+      const recContinue = dailyGain * (0.7 + random() * 0.5) * memeMultiplier;
+      
+      // DD-002: Only set price event if meaningful movement (>0.5%)
+      // Otherwise let normal market forces handle it (no transition effect)
+      if (Math.abs(recContinue) > 0.005) {
+        setPriceEvent(stock, recContinue, 'RECOVERY_CONTINUE', `[daysLeft=${stock.crashDaysLeft}]`);
+      }
       stock.sentimentOffset = (0.03 + random() * 0.03) * memeMultiplier;
       
       if (random() < 0.15) {
@@ -943,74 +982,74 @@ const DCB = (function() {
     };
     
     if (newsItem.newsType === 'crash' && newsItem.isCrash) {
-      tutorial.type = '🔴 CRASH - DO NOT BUY';
+      tutorial.type = '🔴 CRASH - DO NOT BUY (~30% base probability)';
       tutorial.description = 'A bounce is coming. Watch for: (1) Volume trend, (2) Retracement %, (3) 3+ up days';
-      tutorial.implication = 'Base reversal rate: 30%. Need confirming signals to reach 85%. Was crash HARD INFO or SOFT INFO?';
+      tutorial.implication = '📊 30% base reversal rate. Need Gold Standard signals to reach 85%.';
       tutorial.action = '⛔ DO NOT BUY THE DIP. Wait for signals.';
       tutorial.timing = 'NEXT: Bounce phase starts in 2-4 days';
       tutorial.catalyst = '🏆 DCB Gold Standard: Must break and HOLD above 61.8% Fibonacci on RISING volume';
     }
     else if (newsItem.newsType === 'dead_cat_bounce' && newsItem.bouncePhase === 'starting') {
-      tutorial.type = '🟡 BOUNCE STARTED - OBSERVE';
+      tutorial.type = '🟡 BOUNCE STARTED - OBSERVE (~35% probability)';
       tutorial.description = 'Volume ' + (newsItem.volumeIndicator || 'trend') + '. Need >50% retracement + rising volume.';
-      tutorial.implication = 'Current: 30% base. Each signal adds probability.';
+      tutorial.implication = '📊 35% probability. Each signal adds +10-15%.';
       tutorial.action = '⏳ WAIT. Do not buy yet. Observe signals.';
       tutorial.timing = 'NEXT: Outcome determined when bounce phase ends';
       tutorial.catalyst = '🏆 DCB Gold Standard: Break + HOLD above 61.8% Fib on RISING volume = 85% success';
     }
     else if (newsItem.newsType === 'dead_cat_bounce' && newsItem.bouncePhase === 'warning') {
-      tutorial.type = '🟠 WARNING - TRAP LIKELY';
+      tutorial.type = '🟠 WARNING - TRAP LIKELY (~30% probability)';
       tutorial.description = 'Volume declining + below 50% = classic trap setup. NOT meeting Gold Standard!';
-      tutorial.implication = 'Declining volume = only ~30% reversal chance';
+      tutorial.implication = '📊 ~30% reversal chance. Declining volume is bearish.';
       tutorial.action = '⛔ DO NOT BUY. Exit if holding.';
       tutorial.timing = 'NEXT: Likely fail → decline → possible another bounce';
       tutorial.catalyst = '❌ MISSING: Rising volume + 61.8% Fib break required for 85% setup';
     }
     else if (newsItem.newsType === 'dead_cat_bounce' && newsItem.bouncePhase === 'failed') {
-      tutorial.type = '🔴 TRAP CONFIRMED - STAY AWAY';
+      tutorial.type = '🔴 TRAP CONFIRMED - STAY AWAY (<20% probability)';
       tutorial.description = 'More downside coming. Each bounce gets weaker.';
-      tutorial.implication = 'Signals were weak. Trap sprung. Did NOT meet Gold Standard.';
+      tutorial.implication = '📊 <20% reversal now. Signals were weak. Trap sprung.';
       tutorial.action = '⛔ DO NOT average down. Do NOT catch falling knife.';
       tutorial.timing = 'NEXT: Decline → possible weaker bounce or capitulation';
       tutorial.catalyst = '📚 LESSON: Without 61.8% Fib + rising volume, 70% of bounces are traps';
     }
     else if (newsItem.newsType === 'dead_cat_bounce' && newsItem.bouncePhase === 'repeat_attempt') {
       const odds = Math.max(10, 30 - (newsItem.bounceNumber - 1) * 10);
-      tutorial.type = '🔴 BOUNCE #' + newsItem.bounceNumber + ' - VERY RISKY';
+      tutorial.type = `🔴 BOUNCE #${newsItem.bounceNumber} - VERY RISKY (~${odds}% probability)`;
       tutorial.description = 'Volume very thin. Smart money gone.';
-      tutorial.implication = `Each failure reduces odds. Now ~${odds}% max.`;
+      tutorial.implication = `📊 ~${odds}% max probability. Each failure reduces odds by 10%.`;
       tutorial.action = '⛔ DO NOT BUY. Wait for capitulation.';
       tutorial.timing = 'NEXT: Likely another failure → capitulation';
       tutorial.catalyst = '❌ Multiple bounces = Gold Standard impossible. Wait for fresh setup.';
     }
     else if (newsItem.newsType === 'reversal_forming') {
-      tutorial.type = '🟢 REVERSAL FORMING - PREPARE';
+      tutorial.type = '🟢 REVERSAL FORMING - PREPARE (~65% probability)';
       tutorial.description = 'Building base. Watch for breakout on HIGH volume above 61.8% Fib.';
-      tutorial.implication = 'Signals strong: >50% + steady volume = ~65% chance';
+      tutorial.implication = '📊 ~65% probability. Signals strong: >50% + steady volume.';
       tutorial.action = '⏳ PREPARE to buy on breakout. Not yet.';
       tutorial.timing = 'NEXT: Breakout = ENTRY SIGNAL';
       tutorial.catalyst = '🔄 APPROACHING Gold Standard: Need 61.8% break + hold + rising volume';
     }
     else if (newsItem.newsType === 'reversal_confirmed') {
-      tutorial.type = '🟢 BREAKOUT - ENTRY SIGNAL';
+      tutorial.type = '🟢 BREAKOUT - ENTRY SIGNAL (85% probability)';
       tutorial.description = 'Target: 60-90% recovery of crash losses';
-      tutorial.implication = 'Reversal confirmed. High-volume breakout above 61.8%.';
+      tutorial.implication = '📊 85% reversal probability. High-volume breakout above 61.8%.';
       tutorial.action = '✅ CONSIDER BUYING. Set stop below breakout level.';
       tutorial.timing = 'NEXT: Recovery phase. Take profits at target.';
       tutorial.catalyst = '🏆 GOLD STANDARD MET: 61.8% Fib break + hold + rising volume = 85% setup';
     }
     else if (newsItem.newsType === 'crash_resolution') {
-      tutorial.type = '⚪ CAPITULATION - NEUTRAL';
+      tutorial.type = '⚪ CAPITULATION - NEUTRAL (~40% probability)';
       tutorial.description = 'Stock may stabilize here. No rush.';
-      tutorial.implication = 'Selling exhausted. Base forming naturally.';
+      tutorial.implication = '📊 ~40% chance of new setup forming. Selling exhausted.';
       tutorial.action = '⏳ WAIT for new setup. This cycle over.';
       tutorial.timing = 'LESSON: Patience > FOMO. Signals > emotion.';
       tutorial.catalyst = '📚 LESSON: Only trade setups that meet Gold Standard criteria';
     }
     else if (newsItem.newsType === 'recovery' || newsItem.newsType === 'recovery_complete') {
-      tutorial.type = '🟢 RECOVERY - PROFIT TAKING';
+      tutorial.type = '🟢 RECOVERY - PROFIT TAKING (Pattern Confirmed)';
       tutorial.description = 'Nearing target. Consider taking profits.';
-      tutorial.implication = 'Reversal played out as signals indicated.';
+      tutorial.implication = '✅ Gold Standard delivered. Reversal played out as signals indicated.';
       tutorial.action = '💰 If holding: Take profits. If not: Wait for next setup.';
       tutorial.timing = 'LESSON: Waiting for confirmation avoided trap risk.';
       tutorial.catalyst = '✅ Gold Standard delivered: 61.8% Fib + rising volume predicted success';

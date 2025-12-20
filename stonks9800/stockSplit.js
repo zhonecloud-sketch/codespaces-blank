@@ -418,7 +418,7 @@ const StockSplit = (function() {
     // Generate effective day news
     generateEffectiveDayNews(stock);
     
-    console.log(`[SPLIT] ${getDate()}: ${stock.symbol} EFFECTIVE ${getPriceInfo(stock)} (run-up: +${(split.runUpTotal * 100).toFixed(1)}%) [reversalDays=${CONSTANTS.DURATION.reversalWindow}]`);
+    console.log(`[SPLIT] ${getDate()}: ${stock.symbol} EFFECTIVE ${getPriceInfo(stock)} (run-up: +${(split.runUpTotal * 100).toFixed(1)}%) [reversalDays=${split.reversalDays}]`);
   }
 
   function processReversalPhase(stock, daysIntoReversal) {
@@ -458,7 +458,7 @@ const StockSplit = (function() {
         console.log(`[SPLIT] ${getDate()}: ${stock.symbol} VETO - NO REVERSAL ${getPriceInfo(stock)} (factor: ${split.vetoFactors[0]})`);
       }
       
-      console.log(`[SPLIT] ${getDate()}: ${stock.symbol} REVERSAL DECISION: ${split.reversalWillHappen ? 'YES' : 'NO'} ${getPriceInfo(stock)} (prob: ${(reversalProb * 100).toFixed(0)}%) [daysLeft=${CONSTANTS.DURATION.reversalWindow - daysIntoReversal}]`);
+      console.log(`[SPLIT] ${getDate()}: ${stock.symbol} REVERSAL DECISION: ${split.reversalWillHappen ? 'YES' : 'NO'} ${getPriceInfo(stock)} (prob: ${(reversalProb * 100).toFixed(0)}%) [daysLeft=${split.reversalDays - daysIntoReversal}]`);
     }
 
     // Apply reversal bias if reversal is happening

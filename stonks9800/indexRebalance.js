@@ -249,6 +249,52 @@ const IndexRebalance = (function() {
     return Math.floor(randomInRange(min, max + 1));
   }
 
+  // ========== DD-002 STANDARD API ==========
+  /**
+   * Get formatted date string from game state
+   */
+  function getDate() {
+    const state = getGameState();
+    const day = state.day || 0;
+    const year = Math.floor(day / 252) + 1;
+    const dayOfYear = day % 252;
+    const month = Math.floor(dayOfYear / 21) + 1;
+    const dayOfMonth = (dayOfYear % 21) + 1;
+    return `${year}/${month}/${dayOfMonth}`;
+  }
+
+  /**
+   * DD-002 Standard Price Event API
+   * Sets stock.eventExpectedPrice and stock.eventExpectedDelta for GUI/log parity testing
+   * @param {Object} stock - Stock object
+   * @param {number} priceChange - Expected price change as decimal (e.g., 0.05 for 5%)
+   * @param {string} phaseName - Current phase name for logging
+   * @param {Object} rebal - Index rebalance state object
+   * @param {string} extraLogInfo - Additional info to append to log
+   * @returns {Object} { expectedPrice, priceChange, logString }
+   */
+  function setPriceEvent(stock, priceChange, phaseName, rebal, extraLogInfo = '') {
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set transition effect for test validation
+    stock.indexRebalanceTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;
+    
+    // Build Gold Standard criteria display
+    const gs = rebal.goldStandard || {};
+    const criteriaKeys = ['isTier1', 'hasRunUp', 'hasMocSpike', 'hasReversalSetup'];
+    const criteriaDisplay = criteriaKeys.map(k => (gs[k] ? '✓' : '✗') + k.replace('has', '').replace('is', '')).join(' ');
+    
+    // Count criteria met
+    const criteriaMet = criteriaKeys.filter(k => gs[k]).length;
+    
+    const logString = `[INDEX] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${(actualDelta * 100).toFixed(2)}%] ${criteriaMet}/4 GoldStd [${criteriaDisplay}] ${extraLogInfo} [day=${rebal.day || getGameState().day}]`;
+    
+    return { expectedPrice, priceChange, logString };
+  }
+
   // ========== CORE: CHECK FOR INDEX REBALANCE EVENTS ==========
   function checkIndexRebalanceEvents() {
     const stockList = getStocks();
@@ -495,6 +541,11 @@ const IndexRebalance = (function() {
       `Index funds must liquidate ${stock.symbol} positions by the effective date.`
     ];
 
+    // DD-002: Log announcement event (no price change yet)
+    const event = setPriceEvent(stock, 0, 'ANNOUNCEMENT', rebal, 
+      `type=${rebal.eventType} index=${indexName} tier=${rebal.indexTier}`);
+    console.log(event.logString);
+
     news.push({
       headline: randomChoice(headlines),
       description: randomChoice(descriptions),
@@ -506,6 +557,8 @@ const IndexRebalance = (function() {
       indexTier: rebal.indexTier,
       isAddition: rebal.isAddition,
       daysToEffective: rebal.daysToEffective,
+      goldStandardCount: [rebal.goldStandard.isTier1, rebal.goldStandard.hasRunUp, rebal.goldStandard.hasMocSpike, rebal.goldStandard.hasReversalSetup].filter(Boolean).length,
+      goldStandardCriteria: rebal.goldStandard,
       isIndexRebalance: true
     });
   }
@@ -525,6 +578,11 @@ const IndexRebalance = (function() {
       `${stock.symbol} slides as removal from ${rebal.indexName} nears`
     ];
 
+    // DD-002: Log run-up event
+    const event = setPriceEvent(stock, rebal.dailyBias || 0, 'RUNUP', rebal, 
+      `runUpTotal=${runUpPct}% daysToEff=${rebal.daysToEffective}`);
+    console.log(event.logString);
+
     news.push({
       headline: randomChoice(headlines),
       description: `${rebal.daysToEffective} days until effective date. ${rebal.goldStandard.hasRunUp ? 'Run-up exceeds 5% threshold.' : 'Watching for 5%+ run-up.'}`,
@@ -534,6 +592,8 @@ const IndexRebalance = (function() {
       indexRebalancePhase: 'runUp',
       runUpPercent: rebal.runUpTotal,
       hasGoldStandardRunUp: rebal.goldStandard.hasRunUp,
+      goldStandardCount: [rebal.goldStandard.isTier1, rebal.goldStandard.hasRunUp, rebal.goldStandard.hasMocSpike, rebal.goldStandard.hasReversalSetup].filter(Boolean).length,
+      goldStandardCriteria: rebal.goldStandard,
       isIndexRebalance: true
     });
   }
@@ -557,6 +617,11 @@ const IndexRebalance = (function() {
                            rebal.goldStandard.hasRunUp && 
                            rebal.goldStandard.hasMocSpike;
 
+    // DD-002: Log effective day event
+    const event = setPriceEvent(stock, rebal.dailyBias || 0, 'EFFECTIVE', rebal, 
+      `MOC=${mocMultiple}x isGoldStd=${goldStandardMet}`);
+    console.log(event.logString);
+
     news.push({
       headline: randomChoice(headlines),
       description: `MOC volume ${mocMultiple}x normal. ${goldStandardMet ? '⭐ GOLD STANDARD: Watch for T+2 reversal setup!' : 'Marginal buyer exhausted.'}`,
@@ -566,6 +631,8 @@ const IndexRebalance = (function() {
       indexRebalancePhase: 'effectiveDay',
       mocVolumeMultiple: rebal.mocVolumeMultiple,
       isGoldStandard: goldStandardMet,
+      goldStandardCount: [rebal.goldStandard.isTier1, rebal.goldStandard.hasRunUp, rebal.goldStandard.hasMocSpike, rebal.goldStandard.hasReversalSetup].filter(Boolean).length,
+      goldStandardCriteria: rebal.goldStandard,
       isIndexRebalance: true
     });
   }
@@ -589,6 +656,11 @@ const IndexRebalance = (function() {
                            rebal.goldStandard.hasMocSpike &&
                            rebal.goldStandard.hasReversalSetup;
 
+    // DD-002: Log reversal event
+    const event = setPriceEvent(stock, rebal.dailyBias || 0, 'REVERSAL', rebal, 
+      `will=${rebal.reversalWillHappen} prob=${((rebal.finalReversalProb || 0) * 100).toFixed(0)}%`);
+    console.log(event.logString);
+
     news.push({
       headline: randomChoice(headlines),
       description: goldStandardMet ? 
@@ -599,6 +671,8 @@ const IndexRebalance = (function() {
       newsType: 'index_rebalance',
       indexRebalancePhase: 'reversal',
       isGoldStandard: goldStandardMet,
+      goldStandardCount: [rebal.goldStandard.isTier1, rebal.goldStandard.hasRunUp, rebal.goldStandard.hasMocSpike, rebal.goldStandard.hasReversalSetup].filter(Boolean).length,
+      goldStandardCriteria: rebal.goldStandard,
       isIndexRebalance: true
     });
   }
@@ -609,6 +683,11 @@ const IndexRebalance = (function() {
     const vetoFactor = rebal.vetoFactors[0];
     const vetoInfo = CONSTANTS.VETO_FACTORS[vetoFactor];
     
+    // DD-002: Log veto event
+    const event = setPriceEvent(stock, 0, 'VETO', rebal, 
+      `factor=${vetoFactor}`);
+    console.log(event.logString);
+
     news.push({
       headline: `${stock.symbol} defies typical post-inclusion reversal`,
       description: `Veto factor: ${vetoInfo.description}. The normal reversal pattern may be delayed or cancelled.`,
@@ -617,12 +696,22 @@ const IndexRebalance = (function() {
       newsType: 'index_rebalance',
       indexRebalancePhase: 'veto',
       vetoFactor: vetoFactor,
+      goldStandardCount: [rebal.goldStandard.isTier1, rebal.goldStandard.hasRunUp, rebal.goldStandard.hasMocSpike, rebal.goldStandard.hasReversalSetup].filter(Boolean).length,
+      goldStandardCriteria: rebal.goldStandard,
       isIndexRebalance: true
     });
   }
 
   function generateCompletionNews(stock) {
+    const rebal = stock.indexRebalance;
     const news = getNews();
+    
+    // DD-002: Log completion event
+    if (rebal) {
+      const event = setPriceEvent(stock, 0, 'COMPLETE', rebal, 
+        `result=${rebal.reversalWillHappen ? 'reversed' : 'no-reversal'}`);
+      console.log(event.logString);
+    }
     
     // No specific completion news needed - event just ends
   }

@@ -136,6 +136,49 @@ const FOMORally = (function() {
     gameState: null
   };
 
+  // ========== DD-002 STANDARD API ==========
+  /**
+   * Get formatted date string from game state
+   */
+  function getDate() {
+    const state = deps.gameState || { day: 0 };
+    const day = state.day || 0;
+    const year = Math.floor(day / 252) + 1;
+    const dayOfYear = day % 252;
+    const month = Math.floor(dayOfYear / 21) + 1;
+    const dayOfMonth = (dayOfYear % 21) + 1;
+    return `${year}/${month}/${dayOfMonth}`;
+  }
+
+  /**
+   * DD-002 Standard Price Event API
+   * Sets stock.eventExpectedPrice and stock.eventExpectedDelta for GUI/log parity testing
+   */
+  function setPriceEvent(stock, priceChange, phaseName, rally, extraLogInfo = '') {
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set transition effect for test validation
+    stock.fomoRallyTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;
+    
+    // Build Gold Standard criteria display
+    const gs = rally.goldStandard || {};
+    const criteriaKeys = ['hasVerticalitySignal', 'hasRetailEuphoria', 'hasSentimentDivergence', 'hasBlowOffTop'];
+    const criteriaDisplay = criteriaKeys.map(k => {
+      const shortName = k.replace('has', '');
+      return (gs[k] ? '✓' : '✗') + shortName;
+    }).join(' ');
+    
+    // Count criteria met
+    const criteriaMet = criteriaKeys.filter(k => gs[k]).length;
+    
+    const logString = `[FOMO] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${(actualDelta * 100).toFixed(2)}%] ${criteriaMet}/4 GoldStd [${criteriaDisplay}] ${extraLogInfo} [day=${rally.day || 0}]`;
+    
+    return { expectedPrice, priceChange, logString };
+  }
+
   // ========== INITIALIZATION ==========
   function init(dependencies = {}) {
     if (dependencies.random) deps.random = dependencies.random;
@@ -633,6 +676,21 @@ const FOMORally = (function() {
       complete: 'neutral'
     };
 
+    // Calculate signal to get daily bias
+    const signal = calculateSignal(stock);
+    const dailyBias = signal.dailyBias || 0;
+
+    // DD-002: Log event with price expectation
+    const extraInfo = phase === 'blowOff' ? `vol=${rally.volumeMultiple.toFixed(1)}x P/C=${rally.putCallRatio.toFixed(2)}` :
+                      phase === 'crash' ? `will=${rally.crashWillHappen} prob=${((rally.finalCrashProb || 0) * 100).toFixed(0)}%` :
+                      phase === 'complete' ? `result=${rally.crashWillHappen ? 'crashed' : 'held'}` :
+                      `mentions=${rally.socialMentions.toFixed(0)}x SD=${rally.priceDeviation.toFixed(1)}`;
+    const event = setPriceEvent(stock, dailyBias, phase.toUpperCase(), rally, extraInfo);
+    console.log(event.logString);
+
+    // Count gold standard criteria met
+    const gsMet = Object.values(rally.goldStandard).filter(Boolean).length;
+
     deps.todayNews.push({
       headline,
       description: getPhaseDescription(phase, rally),
@@ -640,7 +698,9 @@ const FOMORally = (function() {
       relatedStock: stock.symbol,
       newsType: 'fomo_rally',
       phase,
-      isFOMORally: true
+      isFOMORally: true,
+      goldStandardCount: gsMet,
+      goldStandardCriteria: rally.goldStandard
     });
   }
 

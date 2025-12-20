@@ -125,6 +125,48 @@ const ShortSqueeze = (function() {
     random: Math.random
   };
 
+  // ========== DD-002 STANDARD API ==========
+  /**
+   * Get formatted date string from game state
+   */
+  function getDate() {
+    const day = deps.gameState.day || 0;
+    const year = Math.floor(day / 252) + 1;
+    const dayOfYear = day % 252;
+    const month = Math.floor(dayOfYear / 21) + 1;
+    const dayOfMonth = (dayOfYear % 21) + 1;
+    return `${year}/${month}/${dayOfMonth}`;
+  }
+
+  /**
+   * DD-002 Standard Price Event API
+   * Sets stock.eventExpectedPrice and stock.eventExpectedDelta for GUI/log parity testing
+   */
+  function setPriceEvent(stock, priceChange, phaseName, squeeze, extraLogInfo = '') {
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set transition effect for test validation
+    stock.shortSqueezeTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;
+    
+    // Build Gold Standard criteria display
+    const gs = squeeze.goldStandard || {};
+    const criteriaKeys = ['hasParabolicExtension', 'hasVolumeClimax', 'hasBorrowPlateau', 'hasRsiDivergence'];
+    const criteriaDisplay = criteriaKeys.map(k => {
+      const shortName = k.replace('has', '');
+      return (gs[k] ? '✓' : '✗') + shortName;
+    }).join(' ');
+    
+    // Count criteria met
+    const criteriaMet = criteriaKeys.filter(k => gs[k]).length;
+    
+    const logString = `[SQUEEZE] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${(actualDelta * 100).toFixed(2)}%] ${criteriaMet}/4 GoldStd [${criteriaDisplay}] ${extraLogInfo} [day=${squeeze.dayInPhase || 0}]`;
+    
+    return { expectedPrice, priceChange, logString };
+  }
+
   // ========== INITIALIZATION ==========
   function init(dependencies) {
     if (dependencies) {
@@ -602,6 +644,21 @@ const ShortSqueeze = (function() {
       complete: `Squeeze cycle complete. Final price: $${stock.price.toFixed(2)}.`
     };
 
+    // Calculate signal to get daily bias
+    const signal = calculateSignal(stock);
+    const dailyBias = signal.dailyBias || 0;
+
+    // DD-002: Log event with price expectation
+    const extraInfo = phase === 'climax' ? `RSI=${squeeze.rsiValue.toFixed(0)} vol=${squeeze.volumeMultiple.toFixed(1)}x` :
+                      phase === 'reversal' ? `will=${squeeze.reversalWillHappen} prob=${((squeeze.finalReversalProb || 0) * 100).toFixed(0)}%` :
+                      phase === 'complete' ? `result=${squeeze.reversalWillHappen ? 'reversed' : 'held'}` :
+                      `SI=${(squeeze.shortInterestCurrent * 100).toFixed(0)}% gain=${(squeeze.currentGain * 100).toFixed(0)}%`;
+    const event = setPriceEvent(stock, dailyBias, phase.toUpperCase(), squeeze, extraInfo);
+    console.log(event.logString);
+
+    // Count gold standard criteria met
+    const gsMet = Object.values(squeeze.goldStandard).filter(Boolean).length;
+
     const news = {
       headline: deps.randomChoice(headlines[phase] || headlines.buildup),
       description: descriptions[phase],
@@ -617,6 +674,8 @@ const ShortSqueeze = (function() {
       rsiValue: squeeze.rsiValue,
       currentGain: squeeze.currentGain,
       goldStandard: squeeze.goldStandard,
+      goldStandardCount: gsMet,
+      goldStandardCriteria: squeeze.goldStandard,
       reversalProb: squeeze.finalReversalProb
     };
 

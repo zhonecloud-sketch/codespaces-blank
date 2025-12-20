@@ -366,6 +366,41 @@ const ExecutiveChange = (function() {
     return (stock.isMeme || stock.volatility > 0.05) ? 1.5 : 1.0;
   }
 
+  // ========== DD-002: STANDARDIZED PRICE EVENT API ==========
+  /**
+   * CRITICAL: Call this function for EVERY phase that affects stock price.
+   * This ensures GUI/log/market consistency by setting all required properties.
+   * 
+   * @param {Object} stock - The stock object
+   * @param {number} priceChange - The percentage change (e.g., -0.15 for -15%)
+   * @param {string} phaseName - Name for logging (e.g., 'ANNOUNCEMENT', 'STABILIZATION')
+   * @param {string} extraLogInfo - Additional info for log string
+   * @returns {Object} { expectedPrice, logString } for consistent logging
+   * 
+   * SETS ON STOCK:
+   * - crashTransitionEffect: For market.js DD-001 pure transition
+   * - eventExpectedPrice: For GUI validation
+   * - eventExpectedDelta: For percentage validation
+   */
+  function setPriceEvent(stock, priceChange, phaseName, extraLogInfo = '') {
+    // Calculate expected price with proper rounding (matches market.js)
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    
+    // Calculate actual delta after rounding (matches what render.js shows)
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set ALL required properties atomically
+    stock.crashTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;  // Use actual delta after rounding
+    
+    // Generate standardized log string with ACTUAL delta (matches GUI)
+    const deltaStr = (actualDelta * 100).toFixed(1);
+    const logString = `[EXEC] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${deltaStr}%] ${extraLogInfo}`;
+    
+    return { expectedPrice, priceChange: actualDelta, logString };
+  }
+
   // ========== CHANGE TYPE CLASSIFICATION ==========
   /**
    * Determine executive change type based on probability distribution
@@ -561,15 +596,13 @@ const ExecutiveChange = (function() {
     const impact = CONSTANTS.PRICE_IMPACT.announcement[changeType];
     const memeMultiplier = getMemeMultiplier(stock);
     const actualImpact = (impact.min + random() * (impact.max - impact.min)) * memeMultiplier;
-    stock.crashTransitionEffect = actualImpact;
-    stock.sentimentOffset = (stock.sentimentOffset || 0) - 0.03 * memeMultiplier;
-
-    // Store expected outcome for consistent log/GUI display
-    // Use actual impact (what happens today)
-    stock.eventExpectedPrice = stock.price * (1 + actualImpact);
-    stock.eventExpectedDelta = actualImpact;
     
-    console.log(`[EXEC] ${getDate()}: ${stock.symbol} ${changeType.toUpperCase()} triggered [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] [daysLeft=${stock.execChangeDaysLeft}]`);
+    // DD-002: Use setPriceEvent for announcement day catalyst
+    const event = setPriceEvent(stock, actualImpact, 'ANNOUNCEMENT_DAY', 
+      `[type=${changeType}] [role=${signals.role}] [daysLeft=${stock.execChangeDaysLeft}]`);
+    console.log(event.logString);
+    
+    stock.sentimentOffset = (stock.sentimentOffset || 0) - 0.03 * memeMultiplier;
     console.log(`  Role: ${signals.role}, Successor: ${signals.successionIntegrity?.description}, 8-K: ${signals.cleanAudit?.isClean ? 'CLEAN' : 'WARN'}`);
     console.log(`  Reversal: ${Math.round(reversalProb * 100)}% (will: ${stock.execChangeWillReverse})`);
 
@@ -614,7 +647,13 @@ const ExecutiveChange = (function() {
     if (stock.execChangeDayCounter > 1) {
       // Continued selling pressure on subsequent days
       const impact = CONSTANTS.PRICE_IMPACT.announcement[changeType];
-      stock.crashTransitionEffect = (impact.min * 0.3 + random() * Math.abs(impact.min * 0.3)) * memeMultiplier;
+      const priceChange = (impact.min * 0.3 + random() * Math.abs(impact.min * 0.3)) * memeMultiplier;
+      
+      // DD-002: Only set event if meaningful price change (>0.5%)
+      if (Math.abs(priceChange) > 0.005) {
+        setPriceEvent(stock, priceChange, 'ANNOUNCEMENT_CONT', 
+          `[day=${stock.execChangeDayCounter}] [daysLeft=${stock.execChangeDaysLeft}]`);
+      }
     }
 
     if (stock.execChangeDaysLeft <= 0) {
@@ -634,7 +673,13 @@ const ExecutiveChange = (function() {
 
   function processStabilizationPhase(stock, changeType, memeMultiplier) {
     const impact = CONSTANTS.PRICE_IMPACT.stabilization[changeType];
-    stock.crashTransitionEffect = impact.min + random() * (impact.max - impact.min);
+    const priceChange = impact.min + random() * (impact.max - impact.min);
+    
+    // DD-002: Only set event if meaningful price change (>0.5%)
+    if (Math.abs(priceChange) > 0.005) {
+      setPriceEvent(stock, priceChange, 'STABILIZATION', 
+        `[daysHeld=${stock.stabilizationDaysHeld || 0}] [daysLeft=${stock.execChangeDaysLeft}]`);
+    }
 
     // Check 3-day stabilization rule
     if (stock.price >= stock.execChangeDay1Low) {
@@ -672,11 +717,23 @@ const ExecutiveChange = (function() {
     
     if (stock.execChangeWillReverse) {
       // Recovery phase
-      stock.crashTransitionEffect = (impact.min + random() * (impact.max - impact.min)) / Math.max(1, stock.execChangeDaysLeft);
+      const priceChange = (impact.min + random() * (impact.max - impact.min)) / Math.max(1, stock.execChangeDaysLeft);
+      
+      // DD-002: Only set event if meaningful price change (>0.5%)
+      if (Math.abs(priceChange) > 0.005) {
+        setPriceEvent(stock, priceChange, 'RECOVERY', 
+          `[type=${changeType}] [daysLeft=${stock.execChangeDaysLeft}]`);
+      }
       stock.sentimentOffset = (stock.sentimentOffset || 0) + 0.015 * memeMultiplier;
     } else {
       // Continued decline
-      stock.crashTransitionEffect = impact.min * 0.5 + random() * Math.abs(impact.min * 0.3);
+      const priceChange = impact.min * 0.5 + random() * Math.abs(impact.min * 0.3);
+      
+      // DD-002: Only set event if meaningful price change (>0.5%)
+      if (Math.abs(priceChange) > 0.005) {
+        setPriceEvent(stock, priceChange, 'DECLINE', 
+          `[type=${changeType}] [daysLeft=${stock.execChangeDaysLeft}]`);
+      }
     }
 
     if (stock.execChangeDaysLeft <= 0) {
@@ -846,27 +903,28 @@ const ExecutiveChange = (function() {
     const signals = newsItem.execChangeSignals || {};
     const phase = newsItem.execChangePhase;
     const reversalProb = newsItem.reversalProbability || 0.5;
+    const probPercent = Math.round(reversalProb * 100);
 
     const typeDescriptions = {
-      [CONSTANTS.CHANGE_TYPES.ABRUPT_NO_SUCCESSOR]: '🔴 ABRUPT DEPARTURE (Fundamental Risk)',
-      [CONSTANTS.CHANGE_TYPES.CFO_EXIT_CLEAN]: '🟡 CFO EXIT (Slow Recovery)',
-      [CONSTANTS.CHANGE_TYPES.PLANNED_INTERNAL]: '🟢 PLANNED TRANSITION (Good Reversal)',
-      [CONSTANTS.CHANGE_TYPES.GOLD_STANDARD]: '🏆 GOLD STANDARD (85%+ Reversal)'
+      [CONSTANTS.CHANGE_TYPES.ABRUPT_NO_SUCCESSOR]: `🔴 ABRUPT DEPARTURE (Fundamental Risk) - ${probPercent}% probability`,
+      [CONSTANTS.CHANGE_TYPES.CFO_EXIT_CLEAN]: `🟡 CFO EXIT (Slow Recovery) - ${probPercent}% probability`,
+      [CONSTANTS.CHANGE_TYPES.PLANNED_INTERNAL]: `🟢 PLANNED TRANSITION (Good Reversal) - ${probPercent}% probability`,
+      [CONSTANTS.CHANGE_TYPES.GOLD_STANDARD]: `🏆 GOLD STANDARD (85%+ Reversal) - ${probPercent}% probability`
     };
 
     const tutorial = {
-      type: typeDescriptions[changeType] || '🟡 EXECUTIVE CHANGE',
+      type: typeDescriptions[changeType] || `🟡 EXECUTIVE CHANGE - ${probPercent}% probability`,
       description: changeType === CONSTANTS.CHANGE_TYPES.ABRUPT_NO_SUCCESSOR
         ? 'Abrupt departure without successor - high risk of further decline.'
         : changeType === CONSTANTS.CHANGE_TYPES.GOLD_STANDARD
           ? 'All 4 gold standard signals present - high probability reversal setup.'
           : 'Leadership transition with mixed signals - analyze carefully.',
-      implication: `${Math.round(reversalProb * 100)}% reversal probability based on signals.`,
+      implication: `📊 ${probPercent}% reversal probability based on signals.`,
       action: reversalProb >= 0.70
-        ? '📈 BUY after 3-day stabilization confirms support.'
+        ? `📈 BUY after 3-day stabilization confirms support. ${probPercent}% success rate.`
         : reversalProb >= 0.50
-          ? '⏳ WAIT for clearer signals before committing.'
-          : '⛔ DO NOT BUY - high risk of continued decline.'
+          ? `⏳ WAIT for clearer signals. ${probPercent}% probability - needs confirmation.`
+          : `⛔ DO NOT BUY - only ${probPercent}% probability. High risk of continued decline.`
     };
 
     // Signal breakdown

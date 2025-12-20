@@ -121,6 +121,10 @@ const LiquiditySweep = (function() {
     return deps.todayNews || (typeof todayNews !== 'undefined' ? todayNews : []);
   }
 
+  function getGameState() {
+    return deps.gameState || (typeof gameState !== 'undefined' ? gameState : { day: 0 });
+  }
+
   function random() {
     return deps.random();
   }
@@ -131,6 +135,36 @@ const LiquiditySweep = (function() {
       return window.isEventTypeEnabled(eventType);
     }
     return true;
+  }
+
+  // Format game date for logging
+  function getDate() {
+    const state = getGameState();
+    const day = state.day || 0;
+    const year = Math.floor(day / 365) + 1;
+    const month = Math.floor((day % 365) / 30) + 1;
+    const dayOfMonth = (day % 30) + 1;
+    return `Y${year}/M${month}/D${dayOfMonth}`;
+  }
+
+  // DD-002 Standard API: Set price event with log string for GUI/log parity
+  function setPriceEvent(stock, priceChange, phaseName, sweep, extraLogInfo = '') {
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set transition effect and expected price/delta
+    stock.sweepTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;
+    
+    // Build Gold Standard criteria display
+    const gs = sweep.goldStandardCriteria || {};
+    const criteriaStr = `${gs.obviousSupport ? '✓' : '✗'}Obvs ${gs.falseBreakdown ? '✓' : '✗'}FalseBD ${gs.absorptionVolume ? '✓' : '✗'}AbsVol ${gs.reEntry ? '✓' : '✗'}ReEntry`;
+    
+    const deltaStr = (actualDelta * 100).toFixed(1);
+    const logString = `[SWEEP] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${deltaStr}%] ${sweep.goldStandardCount}/4 GoldStd [${criteriaStr}] ${extraLogInfo} [day=${sweep.day}]`;
+    
+    return { expectedPrice, priceChange: actualDelta, logString };
   }
 
   // ========== STATE TRACKING ==========
@@ -440,12 +474,18 @@ const LiquiditySweep = (function() {
         result.goldStandardUpdate = true;
       }
 
-      // Generate sweep news
+      // Generate sweep news with DD-002 logging
       if (dayInPhase === 1) {
+        const event = setPriceEvent(stock, dailyDrop, 'SWEEP_START', sweep, 
+          `support=$${sweep.supportLevel.toFixed(2)} vol=${volumeInfo.volumeMultiple.toFixed(1)}x`);
+        console.log(event.logString);
+        
         result.news = {
           type: 'liquidity_sweep',
           relatedStock: stock.symbol,
           phase: 'sweep',
+          goldStandardCount: sweep.goldStandardCount,
+          goldStandardCriteria: sweep.goldStandardCriteria,
           headline: `${stock.symbol} CRASHES through key support on massive volume`,
           body: `Stock plunges ${Math.abs(dailyDrop * 100).toFixed(1)}% as stop-losses trigger. ` +
                 `Key $${sweep.supportLevel.toFixed(2)} support breached on ${volumeInfo.volumeMultiple.toFixed(1)}x normal volume.`,
@@ -459,9 +499,9 @@ const LiquiditySweep = (function() {
     if (dayInPhase >= sweep.sweepDays) {
       sweep.phase = 'recovery';
       // Only increment if not already counted
-      const wasFalseBreakout = sweep.goldStandardCriteria.falseBreakout;
-      sweep.goldStandardCriteria.falseBreakout = sweep.sweepPenetration >= CONSTANTS.SWEEP.minPenetration;
-      if (sweep.goldStandardCriteria.falseBreakout && !wasFalseBreakout) {
+      const wasFalseBreakout = sweep.goldStandardCriteria.falseBreakdown;
+      sweep.goldStandardCriteria.falseBreakdown = sweep.sweepPenetration >= CONSTANTS.SWEEP.minPenetration;
+      if (sweep.goldStandardCriteria.falseBreakdown && !wasFalseBreakout) {
         sweep.goldStandardCount = Math.min(sweep.goldStandardCount + 1, 4);
         sweep.currentProbability = CONSTANTS.REVERSAL_PROBABILITY.plusSweep;
       }
@@ -510,11 +550,18 @@ const LiquiditySweep = (function() {
           sweep.willSucceed = Math.random() < sweep.currentProbability;
         }
         
+        // DD-002: Log recovery event
+        const event = setPriceEvent(stock, dailyGain, 'RECOVERY', sweep, 
+          `prob=${(sweep.currentProbability * 100).toFixed(0)}% will=${sweep.willSucceed}`);
+        console.log(event.logString);
+        
         result.goldStandardUpdate = true;
         result.news = {
           type: 'liquidity_sweep',
           relatedStock: stock.symbol,
           phase: 'recovery',
+          goldStandardCount: sweep.goldStandardCount,
+          goldStandardCriteria: sweep.goldStandardCriteria,
           headline: `${stock.symbol} RECLAIMS support - "Failed breakdown" confirmed`,
           body: `Stock surges back above $${sweep.supportLevel.toFixed(2)} support. ` +
                 `Classic "Wyckoff Spring" pattern: ${sweep.goldStandardCount}/4 Gold Standard criteria met.`,
@@ -551,10 +598,17 @@ const LiquiditySweep = (function() {
         // Milestone news
         const totalGain = (stock.price - sweep.priceAtStart) / sweep.priceAtStart;
         if (totalGain >= sweep.targetGain * 0.75 && dayInPhase === Math.floor(sweep.continuationDays / 2)) {
+          // DD-002: Log continuation milestone event
+          const event = setPriceEvent(stock, dailyGain, 'CONTINUATION', sweep, 
+            `gain=${(totalGain * 100).toFixed(1)}%`);
+          console.log(event.logString);
+          
           result.news = {
             type: 'liquidity_sweep',
-          relatedStock: stock.symbol,
+            relatedStock: stock.symbol,
             phase: 'continuation',
+            goldStandardCount: sweep.goldStandardCount,
+            goldStandardCriteria: sweep.goldStandardCriteria,
             headline: `${stock.symbol} continues rally after successful sweep reversal`,
             body: `Stock up ${(totalGain * 100).toFixed(1)}% from sweep low. ` +
                   `Institutional accumulation confirmed as "liquidity vacuum" propels price higher.`,
@@ -569,10 +623,17 @@ const LiquiditySweep = (function() {
         result.priceChange = dailyChange;
         
         if (dayInPhase === 1) {
+          // DD-002: Log failed sweep event
+          const event = setPriceEvent(stock, dailyChange, 'FAILED', sweep, 
+            `prob=${(sweep.currentProbability * 100).toFixed(0)}%`);
+          console.log(event.logString);
+          
           result.news = {
             type: 'liquidity_sweep',
-          relatedStock: stock.symbol,
+            relatedStock: stock.symbol,
             phase: 'failed',
+            goldStandardCount: sweep.goldStandardCount,
+            goldStandardCriteria: sweep.goldStandardCriteria,
             headline: `${stock.symbol} sweep reversal FAILS - support becomes resistance`,
             body: `Stock unable to hold above reclaimed support. ` +
                   `Only ${sweep.goldStandardCount}/4 criteria met - probability was ${(sweep.currentProbability * 100).toFixed(0)}%.`,
@@ -588,10 +649,18 @@ const LiquiditySweep = (function() {
       sweep.phase = 'complete';
       
       const finalGain = (stock.price - sweep.priceAtStart) / sweep.priceAtStart;
+      
+      // DD-002: Log completion event
+      const event = setPriceEvent(stock, 0, 'COMPLETE', sweep, 
+        `result=${(finalGain * 100).toFixed(1)}% success=${sweep.willSucceed}`);
+      console.log(event.logString);
+      
       result.news = {
         type: 'liquidity_sweep',
-          relatedStock: stock.symbol,
+        relatedStock: stock.symbol,
         phase: 'complete',
+        goldStandardCount: sweep.goldStandardCount,
+        goldStandardCriteria: sweep.goldStandardCriteria,
         headline: `${stock.symbol} liquidity sweep event complete`,
         body: sweep.willSucceed ?
           `Successful reversal: +${(finalGain * 100).toFixed(1)}% gain. Gold Standard (${sweep.goldStandardCount}/4) delivered.` :

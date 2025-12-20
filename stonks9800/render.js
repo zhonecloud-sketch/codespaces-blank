@@ -628,12 +628,14 @@ function updateDetailView() {
   const value = owned * stock.price;
   const pl = value - (avgCost * owned);
   const change = stock.price - stock.previousPrice;
+  const pctChange = stock.previousPrice > 0 ? (change / stock.previousPrice) * 100 : 0;
   const isUp = change >= 0;
   
   elements.detailTitle.textContent = stock.name;
   elements.detailDesc.textContent = stock.description;
-  elements.detailPrice.textContent = `$${formatNumber(stock.price)}`;
-  elements.detailChange.textContent = (change >= 0 ? '+' : '') + formatNumber(change);
+  elements.detailPrice.textContent = `$${formatPrice(stock.price)}`;
+  // Show both dollar and percent change for clarity
+  elements.detailChange.textContent = `${change >= 0 ? '+' : '-'}$${formatPrice(Math.abs(change))} (${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(1)}%)`;
   elements.detailChange.className = 'detail-change ' + (isUp ? 'price-up' : 'price-down');
   elements.detailDividend.textContent = `${(stock.dividendYield * 100).toFixed(1)}% annually`;
   

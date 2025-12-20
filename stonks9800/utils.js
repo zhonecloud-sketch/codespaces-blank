@@ -4,6 +4,11 @@ function formatNumber(num) {
   return Math.round(num).toLocaleString();
 }
 
+// Format price with 2 decimal places for precise stock prices
+function formatPrice(num) {
+  return num.toFixed(2);
+}
+
 function formatCompact(num) {
   if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';

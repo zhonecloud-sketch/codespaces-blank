@@ -239,6 +239,41 @@ const SSR = (function() {
     return deps.random();
   }
 
+  // ========== DD-002: STANDARDIZED PRICE EVENT API ==========
+  /**
+   * CRITICAL: Call this function for EVERY phase that affects stock price.
+   * This ensures GUI/log/market consistency by setting all required properties.
+   * 
+   * @param {Object} stock - The stock object
+   * @param {number} priceChange - The percentage change (e.g., -0.15 for -15%)
+   * @param {string} phaseName - Name for logging (e.g., 'REPORT', 'REBUTTAL')
+   * @param {string} extraLogInfo - Additional info for log string
+   * @returns {Object} { expectedPrice, logString } for consistent logging
+   * 
+   * SETS ON STOCK:
+   * - shortReportTransitionEffect: For market.js DD-001 pure transition
+   * - eventExpectedPrice: For GUI validation
+   * - eventExpectedDelta: For percentage validation
+   */
+  function setPriceEvent(stock, priceChange, phaseName, extraLogInfo = '') {
+    // Calculate expected price with proper rounding (matches market.js)
+    const expectedPrice = Math.round(stock.price * (1 + priceChange) * 100) / 100;
+    
+    // Calculate actual delta after rounding (matches what render.js shows)
+    const actualDelta = (expectedPrice - stock.price) / stock.price;
+    
+    // Set ALL required properties atomically
+    stock.shortReportTransitionEffect = priceChange;
+    stock.eventExpectedPrice = expectedPrice;
+    stock.eventExpectedDelta = actualDelta;  // Use actual delta after rounding
+    
+    // Generate standardized log string with ACTUAL delta (matches GUI)
+    const deltaStr = (actualDelta * 100).toFixed(1);
+    const logString = `[SSR] ${getDate()}: ${stock.symbol} ${phaseName} [$${expectedPrice.toFixed(2)} Δ${deltaStr}%] ${extraLogInfo}`;
+    
+    return { expectedPrice, priceChange: actualDelta, logString };
+  }
+
   // ========== CALCULATE REVERSAL PROBABILITY ==========
   // Combines all signals into a final reversal probability
   function calculateReversalProbability(stock, verbose = true) {
@@ -378,14 +413,10 @@ const SSR = (function() {
     const immediateImpact = -(crashMagnitude * 0.5 + random() * crashMagnitude * 0.2);
     stock.sentimentOffset = -(crashMagnitude * 0.7) * memeMultiplier;
     stock.volatilityBoost = (stock.volatilityBoost || 0) + 0.6 * memeMultiplier;
-    stock.shortReportTransitionEffect = immediateImpact;
-
-    // Store expected outcome for consistent log/GUI display
-    // Use immediate impact (what happens today), not eventual target
-    stock.eventExpectedPrice = stock.price * (1 + immediateImpact);
-    stock.eventExpectedDelta = immediateImpact;
     
-    console.log(`[SSR] ${getDate()}: ${stock.symbol} SHORT REPORT by ${seller.name}: ${stock.reportType.toUpperCase()} [$${stock.eventExpectedPrice.toFixed(2)} Δ${(stock.eventExpectedDelta * 100).toFixed(1)}%] [daysLeft=${stock.shortReportDaysLeft}]`);
+    // DD-002: Use standardized setPriceEvent API for day1 dump
+    const event = setPriceEvent(stock, immediateImpact, 'DAY1_DUMP', `[daysLeft=${stock.shortReportDaysLeft}] by ${seller.name}: ${stock.reportType.toUpperCase()}`);
+    console.log(event.logString);
 
     return true;
   }
@@ -412,9 +443,10 @@ const SSR = (function() {
           `🔴 ${seller.name} EXPOSES ${stock.symbol}: "Phantom Inventory, Fake Invoices"`,
           `🔴 WHISTLEBLOWER: ${seller.name} Report on ${stock.symbol} Cites Internal Documents`
         ];
+        const priceTarget = Math.round(stock.price * 0.4); // ~60% downside target
         const valuationHeadlines = [
           `🔴 ${seller.name}: "${stock.symbol} Worth 70% Less" - Detailed Analysis`,
-          `🔴 ${seller.name} TARGETS ${stock.symbol}: "Massively Overvalued" - Price Target $0`
+          `🔴 ${seller.name} TARGETS ${stock.symbol}: "Massively Overvalued" - PT $${priceTarget}`
         ];
         const headline = stock.reportType === 'fraud'
           ? fraudHeadlines[Math.floor(Math.random() * fraudHeadlines.length)]
@@ -454,9 +486,13 @@ const SSR = (function() {
 
       const memeMultiplier = getMemeMultiplier(stock);
 
-      // Apply pending transition effects
-      if (stock.pendingTransitionEffect) {
-        stock.shortReportTransitionEffect = stock.pendingTransitionEffect;
+      // Apply pending transition effects via DD-002 API
+      if (stock.pendingTransitionEffect && Math.abs(stock.pendingTransitionEffect) > 0.005) {
+        const pendingEvent = setPriceEvent(stock, stock.pendingTransitionEffect, 'PENDING_EFFECT', `[phase=${stock.shortReportPhase}]`);
+        console.log(pendingEvent.logString);
+        stock.pendingTransitionEffect = 0;
+      } else if (stock.pendingTransitionEffect) {
+        // Small effect (<0.5%) - just clear it, let market forces work
         stock.pendingTransitionEffect = 0;
       }
 
@@ -506,7 +542,11 @@ const SSR = (function() {
         stock.insiderBuyingDay = 1 + Math.floor(random() * stock.shortReportDaysLeft);
       }
 
-      console.log(`[SSR] ${getDate()}: ${stock.symbol} → REBUTTAL WINDOW ${getPriceInfo(stock)} (insider buying: ${stock.insiderBuying}) [daysLeft=${stock.shortReportDaysLeft}]`);
+      // DD-002: Set small negative price event for stabilization day
+      // "Stabilizing" implies slight continued weakness or flat after initial crash
+      const stabilizationMove = -(0.01 + random() * 0.02) * memeMultiplier; // -1% to -3%
+      const event = setPriceEvent(stock, stabilizationMove, 'REBUTTAL_WINDOW', `(insider buying: ${stock.insiderBuying}) [daysLeft=${stock.shortReportDaysLeft}]`);
+      console.log(event.logString);
       
       // Generate news
       news.push({
@@ -515,6 +555,7 @@ const SSR = (function() {
         sentiment: 'negative',
         relatedStock: stock.symbol,
         newsType: 'short_report_update',
+        reportType: stock.reportType,
         volumeIndicator: 'HIGH (3x normal)',
         educationalNote: '🎯 ACTION: WAIT. Do NOT buy yet. Watch for: 1) Data rebuttal, 2) Insider buying, 3) Base formation.'
       });
@@ -546,6 +587,7 @@ const SSR = (function() {
           sentiment: 'neutral',
           relatedStock: stock.symbol,
           newsType: 'short_report_update',
+          reportType: stock.reportType,
           volumeIndicator: 'HIGH',
           educationalNote: '🎯 ACTION: WAIT. Generic denial is NOT enough. Watch for DATA rebuttal with documents in 3-5 days.'
         });
@@ -727,9 +769,11 @@ const SSR = (function() {
         // Set immediate price impact for breakout day
         const breakoutStrength = 0.04 + random() * 0.03; // +4% to +7% on breakout day
         stock.sentimentOffset = breakoutStrength * memeMultiplier;
-        stock.shortReportTransitionEffect = breakoutStrength;
         
+        // DD-002: Use standardized setPriceEvent API for breakout
         const confidence = isValidBase ? 'HIGH-PROBABILITY' : 'MODERATE';
+        const breakoutEvent = setPriceEvent(stock, breakoutStrength, 'BREAKOUT', `[${confidence}] [baseDays=${stock.baseDays}]`);
+        console.log(breakoutEvent.logString);
         news.push({
           headline: `📈 ${stock.symbol} BREAKS OUT above resistance on high volume`,
           description: `After ${stock.baseDays} days of consolidation, shares surge above the base high of $${stock.baseHighPrice.toFixed(2)}. ` +
@@ -748,7 +792,10 @@ const SSR = (function() {
         // Set immediate price impact for breakdown day
         const breakdownStrength = -(0.05 + random() * 0.04); // -5% to -9% on breakdown day
         stock.sentimentOffset = breakdownStrength * memeMultiplier;
-        stock.shortReportTransitionEffect = breakdownStrength;
+        
+        // DD-002: Use standardized setPriceEvent API for breakdown
+        const breakdownEvent = setPriceEvent(stock, breakdownStrength, 'BREAKDOWN', `[baseDays=${stock.baseDays}]`);
+        console.log(breakdownEvent.logString);
         
         news.push({
           headline: `📉 ${stock.symbol} BREAKS DOWN below support, new lows likely`,
@@ -781,8 +828,12 @@ const SSR = (function() {
       const randomNoise = (random() - 0.5) * 0.02;
       stock.sentimentOffset = (randomNoise + meanReversionForce) * memeMultiplier;
       
-      // Also dampen the transition effect during base building
-      stock.shortReportTransitionEffect = (stock.shortReportTransitionEffect || 0) * 0.5;
+      // DD-002: During base building, dampen transition effect
+      // Per rule 2: ~0 effect doesn't dictate price, let market forces work
+      stock.shortReportTransitionEffect = 0;
+      // Clear event expectations so GUI/test know no specific price is expected
+      delete stock.eventExpectedPrice;
+      delete stock.eventExpectedDelta;
 
       // Generate mid-base news occasionally
       if (stock.baseDays === 7) {
@@ -808,12 +859,20 @@ const SSR = (function() {
       // Recovery rally
       const recoveryStrength = 0.02 + random() * 0.02;
       stock.sentimentOffset = recoveryStrength * memeMultiplier;
-      stock.shortReportTransitionEffect = recoveryStrength;
+      
+      // DD-002: Use setPriceEvent for continuation if significant (>0.5%)
+      if (recoveryStrength > 0.005) {
+        setPriceEvent(stock, recoveryStrength, 'RECOVERY_CONTINUATION', `[daysLeft=${stock.shortReportDaysLeft}]`);
+      }
     } else {
       // Continued decline
       const declineStrength = -(0.02 + random() * 0.03);
       stock.sentimentOffset = declineStrength * memeMultiplier;
-      stock.shortReportTransitionEffect = declineStrength;
+      
+      // DD-002: Use setPriceEvent for continuation if significant (>0.5%)
+      if (Math.abs(declineStrength) > 0.005) {
+        setPriceEvent(stock, declineStrength, 'DECLINE_CONTINUATION', `[daysLeft=${stock.shortReportDaysLeft}]`);
+      }
     }
 
     if (stock.shortReportDaysLeft <= 0) {
@@ -916,12 +975,13 @@ const SSR = (function() {
 
     // Short report initial
     if (newsItem.isShortReport) {
+      const baseProb = newsItem.reportType === 'fraud' ? 10 : 40;
       return {
-        type: '🔴 SHORT SELLER ATTACK',
+        type: `🔴 SHORT SELLER ATTACK (~${baseProb}% base probability)`,
         description: newsItem.reportType === 'fraud'
-          ? 'FRAUD allegations are extremely dangerous - only 10% of targets recover. DO NOT buy the dip! Wait for Gold Standard signals.'
-          : 'VALUATION reports have ~40% reversal rate. Still risky, but watch for Gold Standard signals.',
-        implication: 'Brendel & Ryans (2021): Only 31% of companies respond. Watch HOW they respond.',
+          ? `FRAUD allegations are extremely dangerous - only ${baseProb}% of targets recover. DO NOT buy the dip! Wait for Gold Standard signals.`
+          : `VALUATION reports have ~${baseProb}% reversal rate. Still risky, but watch for Gold Standard signals.`,
+        implication: `📊 ${baseProb}% base probability. Brendel & Ryans (2021): Only 31% of companies respond. Watch HOW they respond.`,
         action: '⛔ DO NOT BUY. Wait for Gold Standard signals before entering.',
         timing: 'TIMING WINDOWS: Day 1-2 generic denial expected. Day 3-5 is Gold Standard for DATA rebuttal. After Day 7 with no response = bearish.',
         catalyst: '🏆 SSR Gold Standard: (1) DATA rebuttal within 5 days citing specific docs, (2) NO internal investigation, (3) Insider buying after rebuttal'
@@ -930,12 +990,13 @@ const SSR = (function() {
 
     // Short report updates (stabilization, generic denial, etc.)
     if (newsItem.newsType === 'short_report_update') {
+      const baseProb = newsItem.reportType === 'fraud' ? 10 : 40;
       // Check if this is a generic denial
       if (newsItem.headline && newsItem.headline.includes('denies')) {
         return {
-          type: '⚠️ GENERIC DENIAL - NOT A BUY SIGNAL',
+          type: '⚠️ GENERIC DENIAL - NOT A BUY SIGNAL (~25% probability)',
           description: 'Company issued immediate denial using opinion words ("baseless", "categorically denies").',
-          implication: 'Generic denials are RED FLAGS. 28% of firms respond this way, but it does NOT indicate truth.',
+          implication: '📊 ~25% reversal chance. Generic denials are RED FLAGS. 28% of firms respond this way, but it does NOT indicate truth.',
           action: '⛔ DO NOT BUY. This is NOT the Gold Standard. Wait for DATA rebuttal.',
           timing: 'Watch for Day 3-5: Does company provide POINT-BY-POINT data rebuttal?',
           catalyst: '❌ MISSING: Gold Standard requires DATA rebuttal citing specific documents (10-K pages, GPS logs, etc.)'
@@ -943,9 +1004,9 @@ const SSR = (function() {
       }
       // Stabilization news
       return {
-        type: '📊 SHARES STABILIZING - WATCH FOR SIGNALS',
+        type: `📊 SHARES STABILIZING - WATCH FOR SIGNALS (~${baseProb}% probability)`,
         description: 'Initial panic selling has subsided. Now waiting for company response.',
-        implication: 'Stock is in "discovery" phase. Outcome depends on rebuttal quality.',
+        implication: `📊 ~${baseProb}% reversal chance. Stock is in "discovery" phase. Outcome depends on rebuttal quality.`,
         action: '⏳ DO NOT BUY YET. Wait for: (1) Data rebuttal, (2) Insider buying, (3) Big 4 auditor statement.',
         timing: 'Day 1-2: Expect generic denial. Day 3-5: Gold Standard rebuttal window. Day 7+: No response = bearish.',
         catalyst: '🔍 WATCH FOR: Rebuttal quality is key. Only DATA rebuttals matter, not opinion words.'
@@ -955,9 +1016,9 @@ const SSR = (function() {
     // Insider buying
     if (newsItem.isInsiderBuying) {
       return {
-        type: '💰 INSIDER BUYING DETECTED',
+        type: '💰 INSIDER BUYING DETECTED (+15% to probability)',
         description: 'Executives buying with personal money (Code P) believe allegations are false.',
-        implication: 'Strong reversal signal! Check for cluster buying (3+).',
+        implication: '📊 Adds +15% to reversal probability. Strong signal! Check for cluster buying (3+).',
         action: '⏳ Wait for data rebuttal or auditor confirmation.',
         timing: 'Need cluster buying (3+) for Gold Standard.',
         catalyst: '🎯 Insider piece of Gold Standard: Need Cluster (3+) Open Market Buys (Code P) with >10% wealth commitment'
@@ -968,25 +1029,25 @@ const SSR = (function() {
     if (newsItem.newsType === 'rebuttal') {
       const hints = {
         detailed: {
-          type: '📋 DETAILED DATA REBUTTAL - GOLD STANDARD ✓',
+          type: '📋 DETAILED DATA REBUTTAL - GOLD STANDARD ✓ (~70% probability)',
           description: 'Company provided POINT-BY-POINT counter-evidence with DATA.',
-          implication: 'This is a Gold Standard signal! Still wait for base confirmation.',
+          implication: '📊 ~70% reversal probability. This is a Gold Standard signal! Still wait for base confirmation.',
           action: '⏳ Wait for base formation and breakout.',
           timing: 'Base typically forms in 10-14 days.',
           catalyst: '🏆 GOLD STANDARD MET: Point-by-point data rebuttal addresses allegations directly with evidence'
         },
         generic: {
-          type: '⚠️ WEAK REBUTTAL - NOT GOLD STANDARD',
+          type: '⚠️ WEAK REBUTTAL - NOT GOLD STANDARD (~25% probability)',
           description: 'Generic denial without data is a RED FLAG.',
-          implication: 'Does NOT meet Gold Standard. Stock likely to make new lows.',
+          implication: '📊 ~25% reversal chance. Does NOT meet Gold Standard. Stock likely to make new lows.',
           action: '⛔ DO NOT BUY. Wait for better signals.',
           timing: 'Watch for new lows in coming days.',
           catalyst: '❌ MISSING: Gold Standard requires DATA rebuttal addressing each allegation point-by-point'
         },
         none: {
-          type: '🚨 NO REBUTTAL - DANGER',
+          type: '🚨 NO REBUTTAL - DANGER (<10% probability)',
           description: 'Company silence is extremely bearish.',
-          implication: 'Cannot meet Gold Standard without rebuttal. 90%+ chance of permanent loss.',
+          implication: '📊 <10% reversal chance. Cannot meet Gold Standard without rebuttal. 90%+ chance of permanent loss.',
           action: '⛔ STAY AWAY. Do not average down.',
           timing: 'Expect continued decline.',
           catalyst: '❌ FAILED: No rebuttal = cannot meet Gold Standard'
@@ -999,13 +1060,13 @@ const SSR = (function() {
     if (newsItem.newsType === 'auditor_confirmation') {
       const isBig4 = ['Deloitte', 'PwC', 'EY', 'KPMG'].includes(newsItem.auditorName);
       return {
-        type: isBig4 ? '✅ BIG 4 AUDITOR CONFIRMS - GOLD STANDARD ✓' : '📋 AUDITOR CONFIRMS (non-Big 4)',
+        type: isBig4 ? '✅ BIG 4 AUDITOR CONFIRMS - GOLD STANDARD ✓ (85% probability)' : '📋 AUDITOR CONFIRMS (non-Big 4) (~55% probability)',
         description: isBig4 
           ? `${newsItem.auditorName} (Big 4) reaffirmed the books.`
           : `${newsItem.auditorName} confirmed books, but not a Big 4 firm.`,
         implication: isBig4 
-          ? 'This is a GOLD STANDARD signal for SSR reversal!'
-          : 'Partial confidence only - not a Big 4 firm.',
+          ? '📊 85% reversal probability. This is a GOLD STANDARD signal for SSR reversal!'
+          : '📊 ~55% probability. Partial confidence only - not a Big 4 firm.',
         action: isBig4 ? '📈 Consider buying on breakout.' : '⏳ Wait for additional signals.',
         timing: isBig4 ? 'Watch for base breakout.' : 'May need Big 4 confirmation.',
         catalyst: isBig4 
@@ -1017,9 +1078,9 @@ const SSR = (function() {
     // Base pattern
     if (newsItem.newsType === 'base_update') {
       return {
-        type: '📊 TWO-WEEK BASE FORMING',
+        type: '📊 TWO-WEEK BASE FORMING (~50% probability)',
         description: 'Price consolidating in tight range.',
-        implication: 'Check: Has company issued data rebuttal? Big 4 auditor involved?',
+        implication: '📊 ~50% reversal if base holds. Check: Has company issued data rebuttal? Big 4 auditor involved?',
         action: '⏳ Watch for breakout. Key signals: No new lows, Tight trading range.',
         timing: 'Base formation typically 10-14 days.',
         catalyst: '🔄 BASE FORMING: But Gold Standard also needs data rebuttal OR Big 4 auditor confirmation'
@@ -1029,9 +1090,9 @@ const SSR = (function() {
     // Breakout
     if (newsItem.newsType === 'breakout') {
       return {
-        type: '📈 BREAKOUT CONFIRMED',
+        type: '📈 BREAKOUT CONFIRMED (85% probability if Gold Standard met)',
         description: 'High-volume breakout above base resistance.',
-        implication: 'If Gold Standard signals present, this is a strong entry.',
+        implication: '📊 85% success if Gold Standard signals present, ~50% without.',
         action: '📈 Consider BUYING if Gold Standard met.',
         timing: 'Enter now if signals confirmed.',
         catalyst: '✅ ENTRY POINT: Breakout + Gold Standard (data rebuttal/Big 4 auditor) = 85% success setup'
@@ -1041,9 +1102,9 @@ const SSR = (function() {
     // Breakdown
     if (newsItem.newsType === 'breakdown') {
       return {
-        type: '📉 BASE FAILED - BREAKDOWN',
+        type: '📉 BASE FAILED - BREAKDOWN (<15% probability)',
         description: 'Short seller thesis validated. Gold Standard signals were missing.',
-        implication: 'Expect 50-80% permanent loss.',
+        implication: '📊 <15% recovery chance. Expect 50-80% permanent loss.',
         action: '⛔ DO NOT BUY. Cut losses if holding.',
         timing: 'Further decline expected.',
         catalyst: '📚 LESSON: Without Gold Standard (data rebuttal + Big 4 auditor), most SSR targets fail'
@@ -1054,18 +1115,18 @@ const SSR = (function() {
     if (newsItem.newsType === 'short_report_resolution') {
       if (newsItem.finalOutcome === 'breakout') {
         return {
-          type: '✅ SHORT REPORT SAGA RESOLVED - REVERSAL',
+          type: '✅ SHORT REPORT SAGA RESOLVED - REVERSAL (Success)',
           description: 'Company successfully defended against short attack. Gold Standard criteria were met.',
-          implication: 'Stock has recovered - the dip was a buying opportunity for those who waited for confirmation.',
+          implication: '✅ Stock has recovered - the dip was a buying opportunity for those who waited for confirmation.',
           action: '📚 Review what worked: Data rebuttal? Big 4 auditor? Insider buying?',
           timing: 'Pattern complete. Normal trading resumes.',
           catalyst: '🎓 LESSON: Patience + Gold Standard signals = successful SSR reversal trade'
         };
       } else {
         return {
-          type: '❌ SHORT REPORT SAGA RESOLVED - DECLINE CONFIRMED',
+          type: '❌ SHORT REPORT SAGA RESOLVED - DECLINE CONFIRMED (Failed)',
           description: 'Short seller thesis validated. Allegations had merit.',
-          implication: 'Those who "bought the dip" suffered permanent capital loss.',
+          implication: '❌ Those who "bought the dip" suffered permanent capital loss.',
           action: '📚 Review what was missing: No data rebuttal? No insider buying? Generic denial?',
           timing: 'Pattern complete. Damage is permanent.',
           catalyst: '🎓 LESSON: Without Gold Standard (data rebuttal + Big 4 auditor + insider buying), SSR targets rarely recover'
