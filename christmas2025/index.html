@@ -327,10 +327,17 @@
         // 1. Personalize the name from the URL
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            const name = urlParams.get('to');
+            let name = urlParams.get('to');
+            
             if (name) {
-                // Replaces "Friend and Family" with the name from the link
-                document.getElementById('recipientName').innerHTML = name.replace(' ', '<br>');
+                // 1. Decode the name (e.g., %26 becomes &)
+                const decodedName = decodeURIComponent(name);
+
+                // 2. Construct the text:
+                // The name goes on the first line.
+                // <br> forces "and Family" to the second line.
+                document.getElementById('recipientName').innerHTML = 
+                    decodedName + "<br>and Family";
             }
         }
     
